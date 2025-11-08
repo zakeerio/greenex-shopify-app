@@ -1,0 +1,42 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "cafcc86de84eb17bfc7c904788964f37"
+application_url = "https://greenex-shopify-app.test"
+embedded = true
+name = "GreenEx"
+handle = "greenex-1"
+
+[build]
+automatically_update_urls_on_dev = false
+dev_store_url = "greenex-dev.myshopify.com"
+
+[webhooks]
+api_version = "2025-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/shopify/webhook/customers-redact"
+  compliance_topics = [ "customers/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/shopify/webhook/customers-data-request"
+  compliance_topics = [ "customers/data_request" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/shopify/webhook/shop-redact"
+  compliance_topics = [ "shop/redact" ]
+
+[access.admin]
+direct_api_mode = "online"
+embedded_app_direct_api_access = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_fulfillments,write_fulfillments,read_orders,write_orders"
+
+[auth]
+redirect_urls = [
+  "https://greenex-shopify-app.test/callback"
+]
+
+[pos]
+embedded = false
