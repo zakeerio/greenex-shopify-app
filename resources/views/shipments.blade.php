@@ -18,7 +18,7 @@
         </tr>
       </thead>
       <tbody>
-        @foreach ($shipments as $shipment)
+        {{-- @foreach ($shipments as $shipment)
         <tr class="bg-white border-b hover:bg-gray-100">
           <td class="px-6 py-4">#{{ $shipment->id }}</td>
           <td class="px-6 py-4">{{ $shipment->name }}</td>
@@ -31,7 +31,53 @@
             <a href="#" class="text-red-600 hover:underline">Delete</a>
           </td>
         </tr>
-        @endforeach
+        @endforeach --}}
+
+         <tr>
+              <th scope="col" class="px-6 py-3">
+                ID
+              </th>
+              <th scope="col" class="px-6 py-3">
+                NAME
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Email
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Phone
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Amount
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Pieces
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Weight
+              </th>
+              <th scope="col" class="px-6 py-3">
+                ACCNO
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Ship Address
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Ship City
+              </th>
+              <th scope="col" class="px-6 py-3">
+                REMARKS
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Products
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Status
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Actions
+              </th>
+
+            </tr>
       </tbody>
     </table>
   </div>
