@@ -2,32 +2,44 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class WebhookController extends Controller
 {
-    public function handle(Request $request)
+    public function ordersCreate(Request $request)
     {
-        Log::info('Webhook received:', $request->all());
-        return response()->json(['status' => 'success']);
+        Log::info('Order created webhook', $request->all());
     }
 
-    /**
-     * Handle app uninstall webhook
-     */
+    public function ordersFulfilled(Request $request)
+    {
+        Log::info('Order fulfilled webhook', $request->all());
+    }
+
+    public function fulfillmentsCreate(Request $request)
+    {
+        Log::info('Fulfillment created webhook', $request->all());
+    }
+
+    public function fulfillmentsUpdate(Request $request)
+    {
+        Log::info('Fulfillment updated webhook', $request->all());
+    }
+
+    public function shopUpdate(Request $request)
+    {
+        Log::info('Shop updated webhook', $request->all());
+    }
+
     public function appUninstalled(Request $request)
     {
-        Log::info('App Uninstalled Webhook received:', $request->all());
-        $shopDomain = $request->header('X-Shopify-Shop-Domain');
+        Log::info('App uninstalled webhook', $request->all());
 
-        // Delete the user/shop
-        $user = User::where('shopify_domain', $shopDomain)->first();
-        if ($user) {
-            $user->delete();
+        $shopDomain = $request->input('domain');
+        if ($shopDomain) {
+            User::where('shopify_domain', $shopDomain)->delete();
         }
-
-        return response()->json(['status' => 'success']);
     }
 }

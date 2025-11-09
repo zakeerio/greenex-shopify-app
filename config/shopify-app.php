@@ -387,8 +387,24 @@ return [
     'webhooks' => [
 
         [
-            'topic' => env('SHOPIFY_WEBHOOK_1_TOPIC', 'APP_UNINSTALLED'),
-            'address' => env('SHOPIFY_WEBHOOK_1_ADDRESS', 'https://greenex-shopify-app.test/webhook/app-uninstalled')
+            'topic' => 'ORDERS_CREATE',
+            'address' => env('APP_URL') . '/webhook/orders-create',
+        ],
+        [
+            'topic' => 'FULFILLMENTS_CREATE',
+            'address' => env('APP_URL') . '/webhook/fulfillments-create',
+        ],
+        [
+            'topic' => 'FULFILLMENTS_UPDATE',
+            'address' => env('APP_URL') . '/webhook/fulfillments-update',
+        ],
+        [
+            'topic' => 'SHOP_UPDATE',
+            'address' => env('APP_URL') . '/webhook/shop-update',
+        ],
+        [
+            'topic' => 'APP_UNINSTALLED',
+            'address' => env('APP_URL') . '/webhook/app-uninstalled',
         ],
 
         /*

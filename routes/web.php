@@ -14,8 +14,11 @@ use Osiset\ShopifyApp\Http\Controllers\AuthController;
 
 // Redirect root to the Shopify login/install
 // Route::get('/', function () {
-//     return redirect()->route('shopify.login');
+//     return view('welcome');
+//     // return redirect()->route('shopify.login');
 // });
+
+Route::get('/auth/callback', [AuthController::class, 'callback'])->name('shopify.callback');
 
 Route::get('/login', function(Request $request) {
     dd($request->all());
@@ -40,11 +43,15 @@ Route::middleware(['verify.shopify'])->group(function () {
 });
 
 // 📬 Webhooks
-Route::post('/webhook/orders/create', [WebhookController::class, 'handle'])
-    ->middleware('auth.webhook');
 
-Route::post('/webhook/app-uninstalled', [WebhookController::class, 'appUninstalled'])
-    ->middleware('auth.webhook');
+Route::prefix('webhook')->group(function () {
+    Route::post('orders-create', [WebhookController::class, 'ordersCreate'])->middleware('auth.webhook');
+    Route::post('orders-fulfilled', [WebhookController::class, 'ordersFulfilled'])->middleware('auth.webhook');
+    Route::post('fulfillments-create', [WebhookController::class, 'fulfillmentsCreate'])->middleware('auth.webhook');
+    Route::post('fulfillments-update', [WebhookController::class, 'fulfillmentsUpdate'])->middleware('auth.webhook');
+    Route::post('shop-update', [WebhookController::class, 'shopUpdate'])->middleware('auth.webhook');
+    Route::post('app-uninstalled', [WebhookController::class, 'appUninstalled'])->middleware('auth.webhook');
+});
 
 // ⚙️ App Proxy Example
 Route::get('/proxy/data', function () {
