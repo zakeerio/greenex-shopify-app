@@ -1,5 +1,4 @@
-<nav
-    class="relative bg-white text-black after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10 shadow-md">
+<nav class="relative bg-white text-black after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10 shadow-md">
     <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
         <div class="relative flex h-16 items-center justify-between">
 
@@ -29,19 +28,29 @@
                 <div class="hidden sm:ml-6 sm:block">
                     <div class="flex space-x-4">
                         <a href="{{ route('dashboard') }}"
-                            class="py-2 text-sm font-medium {{ request()->routeIs('dashboard') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">Dashboard</a>
+                           class="py-2 text-sm font-medium {{ request()->routeIs('dashboard') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                            Dashboard
+                        </a>
 
                         <a href="{{ route('orders') }}"
-                            class="px-3 py-2 text-sm font-medium {{ request()->routeIs('orders.*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">Orders</a>
+                           class="px-3 py-2 text-sm font-medium {{ request()->routeIs('orders*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                            Orders
+                        </a>
 
                         <a href="{{ route('shipments') }}"
-                            class="px-3 py-2 text-sm font-medium {{ request()->routeIs('shipments.*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">Shipments</a>
+                           class="px-3 py-2 text-sm font-medium {{ request()->routeIs('shipments*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                            Shipments
+                        </a>
 
                         <a href="{{ route('settings') }}"
-                            class="px-3 py-2 text-sm font-medium {{ request()->routeIs('settings.*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">Settings</a>
+                           class="px-3 py-2 text-sm font-medium {{ request()->routeIs('settings*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                            Settings
+                        </a>
 
                         <a href="#"
-                            class="px-3 py-2 text-sm font-medium {{ request()->routeIs('instructions') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">Instructions</a>
+                           class="px-3 py-2 text-sm font-medium {{ request()->routeIs('instructions') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                            Instructions
+                        </a>
                     </div>
                 </div>
             </div>
@@ -74,15 +83,26 @@
     <div id="mobile-menu"
         class="hidden sm:hidden bg-white text-center backdrop-blur-md border-t border-white/10">
         <div class="space-y-1 px-2 pt-2 pb-3">
-            <a href="{{ route('dashboard') }}" class="block px-3 py-2 text-base font-medium text-green">Dashboard</a>
+            <a href="{{ route('dashboard') }}"
+               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('dashboard') ? 'text-green' : 'text-black hover:text-green' }}">
+                Dashboard
+            </a>
             <a href="{{ route('orders') }}"
-                class="block px-3 py-2 text-base font-medium text-black hover:text-green transition">Orders</a>
+               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('orders*') ? 'text-green' : 'text-black hover:text-green' }}">
+                Orders
+            </a>
             <a href="{{ route('shipments') }}"
-                class="block px-3 py-2 text-base font-medium text-black hover:text-green transition">Shipments</a>
+               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('shipments*') ? 'text-green' : 'text-black hover:text-green' }}">
+                Shipments
+            </a>
             <a href="{{ route('settings') }}"
-                class="block px-3 py-2 text-base font-medium text-black hover:text-green transition">Settings</a>
+               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('settings*') ? 'text-green' : 'text-black hover:text-green' }}">
+                Settings
+            </a>
             <a href="#"
-                class="block px-3 py-2 text-base font-medium text-black hover:text-green transition">Instructions</a>
+               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('instructions') ? 'text-green' : 'text-black hover:text-green' }}">
+                Instructions
+            </a>
         </div>
     </div>
 </nav>
