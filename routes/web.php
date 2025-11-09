@@ -5,6 +5,8 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
 use Osiset\ShopifyApp\Http\Controllers\AuthController;
+use App\Http\Controllers\ShipmentController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -57,3 +59,25 @@ Route::prefix('webhook')->group(function () {
 Route::get('/proxy/data', function () {
     return response()->json(['status' => 'Proxy verified']);
 })->middleware('auth.proxy');
+
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->name('dashboard');
+
+Route::get('/orders', function () {
+    return view('orders');
+})->name('orders');
+
+Route::get('/settings', function () {
+    return view('settings');
+})->name('settings');
+
+Route::get('/shipments', function () {
+    return view('shipments');
+})->name('shipments');
+
+
+
+
+// Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments');
