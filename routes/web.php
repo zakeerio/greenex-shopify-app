@@ -2,11 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
 use Osiset\ShopifyApp\Http\Controllers\AuthController;
 use App\Http\Controllers\ShipmentController;
-
+use App\Http\Controllers\ShopifyStoreController;
+use Osiset\ShopifyApp\Util;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,13 +16,13 @@ use App\Http\Controllers\ShipmentController;
 |--------------------------------------------------------------------------
 */
 
-// Redirect root to the Shopify login/install
-// Route::get('/', function () {
-//     return view('welcome');
-//     // return redirect()->route('shopify.login');
-// });
+// Start OAuth
+Route::get('/auth', [AuthController::class, 'authenticate'])->name('shopify.auth');
 
-Route::get('/auth/callback', [AuthController::class, 'callback'])->name('shopify.callback');
+// // OAuth callback
+// Route::get('/auth/callback', [AuthController::class, 'authenticateCallback'])->name('shopify.callback');
+
+Route::get('/auth/callback', [ShopifyStoreController::class, 'callback'])->name('shopify.callback');
 
 Route::get('/login', function(Request $request) {
     dd($request->all());
@@ -39,7 +41,7 @@ Route::get('/login', function(Request $request) {
 Route::get('/authenticate', [AuthController::class, 'authenticate'])->name('shopify.authenticate');
 
 // 🛡️ Protected routes (only accessible after authentication)
-Route::middleware(['verify.shopify'])->group(function () {
+Route::middleware(['auth.shopify'])->group(function () {
     Route::get('/home', [HomeController::class, 'index'])->name('shopify.home');
     Route::get('/products', [HomeController::class, 'products'])->name('shopify.products');
 });
@@ -56,28 +58,49 @@ Route::prefix('webhook')->group(function () {
 });
 
 // ⚙️ App Proxy Example
-Route::get('/proxy/data', function () {
-    return response()->json(['status' => 'Proxy verified']);
-})->middleware('auth.proxy');
+// Route::get('/proxy/data', function () {
+//     return response()->json(['status' => 'Proxy verified']);
+// })->middleware('auth.proxy');
+
+// Redirect root to the Shopify login/install
+// Route::get('/', function () {
+//     // dd(Util::getShopifyConfig('domain'), request()->all());
+//     // return redirect()->route('dashboard');
+//         return view('dashboard');
+
+// });
+
+// Protected routes for authenticated shops
+
+// Route::group([
+    // 'domain' => Util::getShopifyConfig('domain'),
+    // 'prefix' => Util::getShopifyConfig('prefix'),
+//     'middleware' => ['web', 'verify.shopify'], // ensure shop is logged in
+// ], function () {
+
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
+    Route::get('/orders', [\App\Http\Controllers\ShopifyController::class, 'fetchOrders'])->name('orders');
+
+    // Route::get('/orders', function () {
+    //     return view('orders');
+    // })->name('orders');
+
+    Route::get('/settings', function () {
+        return view('settings');
+    })->name('settings');
+
+    Route::get('/shipments', function () {
+        return view('shipments');
+    })->name('shipments');
+// });
 
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->name('dashboard');
+// api calls
 
-Route::get('/orders', function () {
-    return view('orders');
-})->name('orders');
-
-Route::get('/settings', function () {
-    return view('settings');
-})->name('settings');
-
-Route::get('/shipments', function () {
-    return view('shipments');
-})->name('shipments');
-
-
+// Route::post('/settings/save', [SettingsController::class, 'save'])->name('settings.save');
 
 
 // Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments');

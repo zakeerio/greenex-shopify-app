@@ -3,7 +3,7 @@
 @section('title', 'Shipments')
 
 @section('content')
-<section class="max-w-7xl mx-auto mt-20 px-4 sm:px-6 lg:px-8">
+<section class="max-w-11xl mx-auto mt-1 px-4 sm:px-6 lg:px-8">
   <div class="relative overflow-x-auto shadow-md sm:rounded-lg bg-white">
     <table class="w-full text-sm text-left text-gray-500">
       <thead class="text-xs text-gray-700 uppercase bg-gray-200">
@@ -117,7 +117,7 @@
 
             </tr>
 
-    
+
       </tbody>
     </table>
   </div>

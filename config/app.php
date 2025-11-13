@@ -69,6 +69,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Backend API URL
+    |--------------------------------------------------------------------------
+    |
+    | This value is the base URL of your backend API that your application
+    | may communicate with for data or external integrations.
+    |
+    */
+
+    'backend_api_url' => env('BACKEND_API_URL', 'https://greenx-app.test/api/V10/api'),
+    'backend_api_key' => env('BACKEND_API_API', '123456rx-ecourier123456'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

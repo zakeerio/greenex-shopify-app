@@ -135,7 +135,7 @@ return [
     |
     */
 
-    'prefix' => env('SHOPIFY_APP_PREFIX', ''),
+    'prefix' => env('SHOPIFY_APP_PREFIX', 'shopify'),
 
     /*
     |--------------------------------------------------------------------------
@@ -172,6 +172,9 @@ return [
     */
 
     'api_key' => env('SHOPIFY_API_KEY', ''),
+
+    'redirect_uri' => env('SHOPIFY_REDIRECT_URI', 'https://greenex-shopify-app.test/auth/callback'),
+
 
     /*
     |--------------------------------------------------------------------------

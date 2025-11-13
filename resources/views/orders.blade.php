@@ -3,7 +3,7 @@
 @section('title', 'Orders')
 
 @section('content')
-<section class="max-w-7xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+<section class="max-w-11xl mx-auto mt-1 px-4 sm:px-6 lg:px-8">
   <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
     <table class="w-full text-sm text-left rtl:text-right text-gray-200">
       <thead class="text-xs whitespace-nowrap text-gray-700 uppercase bg-gray-200">

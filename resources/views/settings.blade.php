@@ -3,15 +3,15 @@
 @section('title', 'Settings')
 
 @section('content')
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="max-w-11xl mx-auto mt-1 px-4 sm:px-6 lg:px-8">
 
-  <form class="p-4 md:p-5 bg-gray-200 mt-10 rounded-lg shadow">
+  <form id="SettingForm" class="p-4 md:p-5 bg-gray-200 rounded-lg shadow">
     <div class="grid gap-4 mb-4 lg:grid-cols-3 md:grid-cols-2">
       <div>
-        <label for="name" class="block mb-2 text-sm font-medium text-gray-900">UserName</label>
-        <input type="text" id="name" name="name"
+        <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Email</label>
+        <input type="text" id="email" name="email"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
-          placeholder="UserName" required>
+          placeholder="Email address" required>
       </div>
 
       <div>
@@ -87,7 +87,7 @@
     </div>
 
     <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
-      <button type="button"
+      <button id="AuthenticateAccount" type="button"
         class="text-white bg-green hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
         Authenticate Account
       </button>
