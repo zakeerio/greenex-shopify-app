@@ -1,0 +1,21 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "fac1e9434f4d557cd0f34129c5c96c29"
+
+application_url = "https://greenex-shopify-app.test/"
+
+embedded = true
+name = "GreenEx-dev"
+handle = "greenex-dev-1"
+
+[webhooks]
+api_version = "2025-10"
+
+[auth]
+redirect_urls = [ "https://greenex-shopify-app.test/authenticate" ]
+
+
+[pos]
+embedded = false
+
+[build]
