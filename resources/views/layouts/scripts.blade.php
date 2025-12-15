@@ -5,85 +5,33 @@
         const backendApiKey = "{{ config('app.backend_api_key') }}";
 
         // Handle Authenticate Account button click
-        // $("#AuthenticateAccount").on('click', function(e) {
-        //     e.preventDefault(); // Prevent normal form submit
-
-        //     // Get form values
-        //     let email = $('#email').val();
-        //     let password = $('#password').val();
-        //     let apiKey = $('#apikey').val();
-
-        //     // CSRF token
-        //     let token = $('meta[name="csrf-token"]').attr('content');
-
-        //     // AJAX call to backend API
-        //     $.ajax({
-        //         url: backendApiUrl + "/signin", // example endpoint
-        //         method: "POST",
-        //         headers: {
-        //             'X-CSRF-TOKEN': token,
-        //             'Accept': 'application/json',
-        //             'apiKey': backendApiKey
-        //         },
-        //         data: {
-
-        //             email: email,
-        //             password: password,
-        //             api_key: apiKey,
-        //         },
-        //         success: function(response) {
-        //             alert('✅ Account Loggedin successfully!');
-        //             console.log(response);
-        //         },
-        //         error: function(xhr) {
-        //             alert('❌ Error logging into account.');
-        //             console.log(xhr.responseText);
-        //         }
-        //     });
-        // });
-
-        // const token = $('meta[name="csrf-token"]').attr('content');
-
-        /* ✅ AUTHENTICATE ACCOUNT */
-        // $("#AuthenticateAccount").on("click", function () {
-
-        //     $.ajax({
-        //         url: "/settings/authenticate",
-        //         method: "POST",
-        //         headers: { 'X-CSRF-TOKEN': token },
-        //         data: {
-        //             email: $("#email").val(),
-        //             password: $("#password").val(),
-        //             apikey: $("#apikey").val(),
-        //         },
-        //         success: function (res) {
-        //             alert("✅ " + res.message);
-        //         },
-        //         error: function (err) {
-        //             alert("❌ Authentication Failed");
-        //         }
-        //     });
-        // });
 
         $(function() {
-
             const token = $('meta[name="csrf-token"]').attr('content');
 
             $("#AuthenticateAccount").on("click", function(e) {
                 e.preventDefault();
 
+                // Form fields
                 let email = $("#email").val();
-                let password = $("#password").val();
-                let apiKey = $("#apikey").val();
+                let password = $("#password").val(); // optional if you want to keep
+                let fulfillment = $("#fullfilment").val();
+                let fragile = $("#Fragile").val();
+                let apikey = $("#apikey").val(); // optional / ignore if not storing
+                let insurance = $("#Insurance").val();
+                let account_type = $("#accounttype").val();
+                let auto_push_orders = $("#auto_push_orders").val();
+                let price = $("#price").val();
 
-                if (!email || !password || !apiKey) {
-                    alert("❌ Please fill all fields");
+                // Optional: simple validation
+                if (!email) {
+                    alert("❌ Please enter email");
                     return;
                 }
 
-                // 🔹 STEP 1: Authenticate from External API
+                // External API signin to get token (replace with your API)
                 $.ajax({
-                    url: backendApiUrl + "/signin", // EXTERNAL API
+                    url: backendApiUrl + "/signin",
                     method: "POST",
                     headers: {
                         'Accept': 'application/json',
@@ -92,84 +40,86 @@
                     data: {
                         email: email,
                         password: password,
-                        api_key: apiKey
+                        api_key: apikey
                     },
-
                     success: function(apiResponse) {
+                        let apiToken = apiResponse.data.token;
+                        let user = apiResponse.data.user;
 
-                        console.log("✅ API Auth Success:", apiResponse);
-
-                        // 🔹 STEP 2: If API Auth Success → Save in Laravel DB
+                        // ✅ Save to Laravel DB
                         $.ajax({
-                            url: "/settings/authenticate", // YOUR LARAVEL ROUTE
+                            url: `{{ route('savesettings') }}`,
                             method: "POST",
                             headers: {
                                 'X-CSRF-TOKEN': token
                             },
                             data: {
+                                // shop_domain: user.hub.name ?? "default-shop", // shop_domain required
+                                portal_user_id: user.id, // Shopify user id
                                 email: email,
-                                password: password, // or hashed from backend
-                                apikey: apiKey,
-                                api_response: apiResponse // optional
+                                name: user.name,
+                                phone: user.phone,
+                                user_type: user.user_type,
+                                hub_id: user.hub_id,
+                                merchant_id: user.merchant?.id ?? null,
+                                wallet_balance: user.merchant
+                                    ?.wallet_balance ?? 0,
+                                api_token: apiToken,
+                                api_response: JSON.stringify(apiResponse),
+                                fulfillment_location: fulfillment,
+                                fragile: fragile,
+                                insurance: insurance,
+                                account_type: account_type,
+                                auto_push_cms: auto_push_orders,
+                                price: price
                             },
-
                             success: function(res) {
                                 alert(
-                                    "✅ Account Authenticated & Saved Successfully!");
-                                console.log("Saved:", res);
+                                    "✅ Token & User Saved Successfully");
+                                console.log(res);
                             },
-
                             error: function(err) {
-                                alert(
-                                    "❌ Auth success but DB save failed");
                                 console.error(err.responseText);
+                                alert("❌ Error saving settings");
                             }
                         });
                     },
-
-                    error: function(xhr) {
-                        alert("❌ Authentication Failed. Data NOT Saved");
-                        console.error(xhr.responseText);
+                    error: function(err) {
+                        console.error(err.responseText);
+                        alert("❌ Authentication failed");
                     }
                 });
-
             });
 
-        });
+            /* ✅ SAVE SETTINGS */
+            $(document).on("click", "#SaveAccountSettings", function(e) {
+                e.preventDefault();
 
-
-
-        /* ✅ SAVE SETTINGS */
-        $("#SettingForm").on("submit", function(e) {
-            e.preventDefault();
-
-            $.ajax({
-                url: "/settings/save",
-                method: "POST",
-                headers: {
-                    'X-CSRF-TOKEN': token
-                },
-                data: {
-                    email: $("#email").val(),
-                    password: $("#password").val(),
-                    apikey: $("#apikey").val(),
-                    Fullfillment: $("#Fullfillment").val(),
-                    Firgile: $("#Firgile").val(),
-                    Insurance: $("#Insurance").val(),
-                    accounttype: $("#accounttype").val(),
-                    cms: $("#cms").val(),
-                    price: $("#price").val(),
-                },
-                success: function(res) {
-                    alert("✅ " + res.message);
-                },
-                error: function(err) {
-                    alert("❌ Failed to save settings");
-                }
+                $.ajax({
+                    url: "{{ route('updatesetting') }}",
+                    method: "POST",
+                    headers: {
+                        'X-CSRF-TOKEN': token
+                    },
+                    data: {
+                        fulfillment_location: $("#fullfilment").val(),
+                        fragile : $("#Fragile").val(),
+                        insurance : $("#Insurance").val(),
+                        account_type : $("#accounttype").val(),
+                        auto_push_orders : $("#auto_push_orders").val(),
+                        price : $("#price").val(),
+                    },
+                    success: function(res) {
+                        alert("✅ " + res.message);
+                    },
+                    error: function(err) {
+                        alert("❌ Failed to save settings");
+                    }
+                });
             });
         });
 
-
+        /* ✅ SEND SELECTED ORDERS TO EXTERNAL API */
 
         $('#sendOrders').on('click', function() {
             let ordersData = [];

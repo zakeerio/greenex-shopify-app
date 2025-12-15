@@ -48,9 +48,9 @@ Route::middleware(['verify.shopify'])->group(function () {
     //     return view('orders');
     // })->name('orders');
 
-    Route::get('/settings', function () {
-        return view('settings');
-    })->name('settings');
+    // Route::get('/settings', function () {
+    //     return view('settings');
+    // })->name('settings');
 
     Route::get('/shipments', function () {
         return view('shipments');
@@ -58,8 +58,10 @@ Route::middleware(['verify.shopify'])->group(function () {
 
 
 
+    Route::get('/settings', [ShopSettingsController::class, 'index'])->name('settings');
     Route::post('/settings/authenticate', [ShopSettingsController::class, 'authenticate']);
-    Route::post('/settings/save', [ShopSettingsController::class, 'store']);
+    Route::post('/settings/save', [ShopSettingsController::class, 'store'])->name('savesettings');
+    Route::post('/updatesetting', [ShopSettingsController::class, 'updatesetting'])->name('updatesetting');
 
 
     // Route::get('/', function () {
