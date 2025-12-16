@@ -5,7 +5,7 @@
 @section('content')
 <section class="max-w-11xl mx-auto mt-1 px-4 sm:px-6 lg:px-8">
 
-  <form id="SettingForm" class="p-4 md:p-5 bg-gray-200 rounded-lg shadow">
+  <form id="SettingForm" action="{{ route('authenticateAndSave') }}" class="p-4 md:p-5 bg-gray-200 rounded-lg shadow">
     <div class="grid gap-4 mb-4 lg:grid-cols-3 md:grid-cols-2">
 
       <div>
@@ -105,13 +105,13 @@
     </div>
 
     <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
-        @if (!$settings)
-            <button id="AuthenticateAccount" type="button"
+
+            <button id="AuthenticateAccount" type="submit"
             class="text-white bg-green hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
             Authenticate Account
             </button>
 
-        @endif
+
       <button type="button" id="SaveAccountSettings"
         class="text-white bg-green hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
         Save Account

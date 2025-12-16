@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\ShopSetting;
+use Illuminate\Support\Facades\Auth;
+use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Hash;
 
 class ShopSettingsController extends Controller
@@ -22,37 +24,90 @@ class ShopSettingsController extends Controller
 
 
     /** ✅ Authenticate Account **/
-     public function authenticate(Request $request)
-    {   dd('REQUEST HIT', $request->all());
+    public function authenticateAndSave(Request $request)
+    {
         $request->validate([
-            'email'     => 'required|email',
-            'api_token' => 'required'
+            'email' => 'required|email',
+            'password' => 'required',
+            'apikey' => 'required',
+            'fullfilment' => 'nullable',
+            'fragile' => 'nullable',
+            'insurance' => 'nullable',
+            'account_type' => 'nullable',
+            'auto_push_orders' => 'nullable',
+            'price' => 'nullable|numeric',
         ]);
 
-        $shop = auth()->user()->shop_domain ?? null;
-        $user_id = auth()->user()->id ?? null;
+        $backendApiUrl = env('BACKEND_API_URL');
+        $backendApiKey = env('BACKEND_API_API');
 
-        $setting = ShopSetting::updateOrCreate(
-            ['shop_domain' => $shop,
-             'user_id'     => $user_id],
-            [
-                'email'          => $request->email,
-                'user_name'      => $request->name,
-                'phone'          => $request->phone,
-                'user_type'      => $request->user_type,
-                'hub_id'         => $request->hub_id,
-                'merchant_id'    => $request->merchant_id,
-                'wallet_balance' => $request->wallet_balance ?? 0,
-                'api_token'      => $request->api_token,
-                'api_response'   => $request->api_response,
-            ]
-        );
+        try {
+            $client = new Client([
+                'verify' => false // local SSL only
+            ]);
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'Authenticated & Saved Successfully',
-            'data'    => $setting
-        ]);
+            /** 🔹 STEP 1: External API SIGNIN */
+            $response = $client->post($backendApiUrl . '/signin', [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'apiKey' => $backendApiKey,
+                ],
+                'form_params' => [
+                    'email' => $request->email,
+                    'password' => $request->password,
+                    'api_key' => $request->apikey,
+                ]
+            ]);
+
+            $apiResponse = json_decode($response->getBody()->getContents(), true);
+
+            if (!isset($apiResponse['data']['token'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid API response'
+                ], 422);
+            }
+
+            $token = $apiResponse['data']['token'];
+            $user  = $apiResponse['data']['user'];
+
+            /** 🔹 STEP 2: Save / Update Shop Settings */
+            $shopSetting = ShopSetting::updateOrCreate(
+                [
+                    'user_id' => Auth::id()
+                ],
+                [
+                    'shop_domain'           => $user['hub']['name'] ?? 'default',
+                    'email'                 => $request->email,
+                    'user_name'             => $user['name'] ?? null,
+                    'phone'                 => $user['phone'] ?? null,
+                    'user_type'             => $user['user_type'] ?? null,
+                    'hub_id'                => $user['hub_id'] ?? null,
+                    'merchant_id'           => $user['merchant']['id'] ?? null,
+                    'wallet_balance'        => $user['merchant']['wallet_balance'] ?? 0,
+                    'api_token'             => $token,
+                    'api_response'          => $apiResponse,
+                    'fulfillment_location'  => $request->fullfilment,
+                    'fragile'               => $request->fragile === 'Yes',
+                    'insurance'             => $request->insurance === 'Yes',
+                    'account_type'          => $request->account_type ?? 'live',
+                    'auto_push_cms'         => $request->auto_push_orders === 'Yes',
+                    'price'                 => $request->price ?? 0,
+                ]
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Account authenticated & settings saved',
+                'data' => $shopSetting
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /** ✅ Save Settings **/
@@ -104,8 +159,7 @@ class ShopSettingsController extends Controller
     /** ✅ Update Settings **/
     public function updatesetting(Request $request)
     {
-        // $shop = $request->shop_domain;
-        // dd('REQUEST HIT', $request->all(), auth()->user());
+
         $shop = auth()->user()->name ?? null;
         $userId = auth()->user()->id ?? null;
 

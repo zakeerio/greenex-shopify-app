@@ -9,87 +9,87 @@
         $(function() {
             const token = $('meta[name="csrf-token"]').attr('content');
 
-            $("#AuthenticateAccount").on("click", function(e) {
-                e.preventDefault();
+            // $("#AuthenticateAccount").on("click", function(e) {
+            //     e.preventDefault();
 
-                // Form fields
-                let email = $("#email").val();
-                let password = $("#password").val(); // optional if you want to keep
-                let fulfillment = $("#fullfilment").val();
-                let fragile = $("#Fragile").val();
-                let apikey = $("#apikey").val(); // optional / ignore if not storing
-                let insurance = $("#Insurance").val();
-                let account_type = $("#accounttype").val();
-                let auto_push_orders = $("#auto_push_orders").val();
-                let price = $("#price").val();
+            //     // Form fields
+            //     let email = $("#email").val();
+            //     let password = $("#password").val(); // optional if you want to keep
+            //     let fulfillment = $("#fullfilment").val();
+            //     let fragile = $("#Fragile").val();
+            //     let apikey = $("#apikey").val(); // optional / ignore if not storing
+            //     let insurance = $("#Insurance").val();
+            //     let account_type = $("#accounttype").val();
+            //     let auto_push_orders = $("#auto_push_orders").val();
+            //     let price = $("#price").val();
 
-                // Optional: simple validation
-                if (!email) {
-                    alert("❌ Please enter email");
-                    return;
-                }
+            //     // Optional: simple validation
+            //     if (!email) {
+            //         alert("❌ Please enter email");
+            //         return;
+            //     }
 
-                // External API signin to get token (replace with your API)
-                $.ajax({
-                    url: backendApiUrl + "/signin",
-                    method: "POST",
-                    headers: {
-                        'Accept': 'application/json',
-                        'apiKey': backendApiKey
-                    },
-                    data: {
-                        email: email,
-                        password: password,
-                        api_key: apikey
-                    },
-                    success: function(apiResponse) {
-                        let apiToken = apiResponse.data.token;
-                        let user = apiResponse.data.user;
+            //     // External API signin to get token (replace with your API)
+            //     $.ajax({
+            //         url: backendApiUrl + "/signin",
+            //         method: "POST",
+            //         headers: {
+            //             'Accept': 'application/json',
+            //             'apiKey': backendApiKey
+            //         },
+            //         data: {
+            //             email: email,
+            //             password: password,
+            //             api_key: apikey
+            //         },
+            //         success: function(apiResponse) {
+            //             let apiToken = apiResponse.data.token;
+            //             let user = apiResponse.data.user;
 
-                        // ✅ Save to Laravel DB
-                        $.ajax({
-                            url: `{{ route('savesettings') }}`,
-                            method: "POST",
-                            headers: {
-                                'X-CSRF-TOKEN': token
-                            },
-                            data: {
-                                // shop_domain: user.hub.name ?? "default-shop", // shop_domain required
-                                portal_user_id: user.id, // Shopify user id
-                                email: email,
-                                name: user.name,
-                                phone: user.phone,
-                                user_type: user.user_type,
-                                hub_id: user.hub_id,
-                                merchant_id: user.merchant?.id ?? null,
-                                wallet_balance: user.merchant
-                                    ?.wallet_balance ?? 0,
-                                api_token: apiToken,
-                                api_response: JSON.stringify(apiResponse),
-                                fulfillment_location: fulfillment,
-                                fragile: fragile,
-                                insurance: insurance,
-                                account_type: account_type,
-                                auto_push_cms: auto_push_orders,
-                                price: price
-                            },
-                            success: function(res) {
-                                alert(
-                                    "✅ Token & User Saved Successfully");
-                                console.log(res);
-                            },
-                            error: function(err) {
-                                console.error(err.responseText);
-                                alert("❌ Error saving settings");
-                            }
-                        });
-                    },
-                    error: function(err) {
-                        console.error(err.responseText);
-                        alert("❌ Authentication failed");
-                    }
-                });
-            });
+            //             // ✅ Save to Laravel DB
+            //             $.ajax({
+            //                 url: `{{ route('savesettings') }}`,
+            //                 method: "POST",
+            //                 headers: {
+            //                     'X-CSRF-TOKEN': token
+            //                 },
+            //                 data: {
+            //                     // shop_domain: user.hub.name ?? "default-shop", // shop_domain required
+            //                     portal_user_id: user.id, // Shopify user id
+            //                     email: email,
+            //                     name: user.name,
+            //                     phone: user.phone,
+            //                     user_type: user.user_type,
+            //                     hub_id: user.hub_id,
+            //                     merchant_id: user.merchant?.id ?? null,
+            //                     wallet_balance: user.merchant
+            //                         ?.wallet_balance ?? 0,
+            //                     api_token: apiToken,
+            //                     api_response: JSON.stringify(apiResponse),
+            //                     fulfillment_location: fulfillment,
+            //                     fragile: fragile,
+            //                     insurance: insurance,
+            //                     account_type: account_type,
+            //                     auto_push_cms: auto_push_orders,
+            //                     price: price
+            //                 },
+            //                 success: function(res) {
+            //                     alert(
+            //                         "✅ Token & User Saved Successfully");
+            //                     console.log(res);
+            //                 },
+            //                 error: function(err) {
+            //                     console.error(err.responseText);
+            //                     alert("❌ Error saving settings");
+            //                 }
+            //             });
+            //         },
+            //         error: function(err) {
+            //             console.error(err.responseText);
+            //             alert("❌ Authentication failed");
+            //         }
+            //     });
+            // });
 
             /* ✅ SAVE SETTINGS */
             $(document).on("click", "#SaveAccountSettings", function(e) {
