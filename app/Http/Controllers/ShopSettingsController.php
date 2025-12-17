@@ -19,6 +19,8 @@ class ShopSettingsController extends Controller
         $shopId = auth()->user()->id ?? null;
         $settings = ShopSetting::where('user_id', $shopId)->first();
 
+        $settings = $settings ?? [];
+
         return view('settings', compact('settings'));
     }
 
@@ -74,7 +76,7 @@ class ShopSettingsController extends Controller
             /** 🔹 STEP 2: Save / Update Shop Settings */
             $shopSetting = ShopSetting::updateOrCreate(
                 [
-                    'user_id' => Auth::id()
+                    'user_id' => $request->user_id
                 ],
                 [
                     'shop_domain'           => $user['hub']['name'] ?? 'default',
@@ -96,17 +98,20 @@ class ShopSettingsController extends Controller
                 ]
             );
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Account authenticated & settings saved',
-                'data' => $shopSetting
-            ]);
+            return back()->with('success', 'Account authenticated & settings saved');
+            exit;
+            // return response()->json([
+            //     'status' => true,
+            //     'message' => 'Account authenticated & settings saved',
+            //     'data' => $shopSetting
+            // ]);
 
         } catch (\Throwable $e) {
-            return response()->json([
-                'status' => false,
-                'error' => $e->getMessage()
-            ], 500);
+            return back()->with('error', $e->getMessage());
+            // return response()->json([
+            //     'status' => false,
+            //     'error' => $e->getMessage()
+            // ], 500);
         }
     }
 
@@ -160,8 +165,8 @@ class ShopSettingsController extends Controller
     public function updatesetting(Request $request)
     {
 
-        $shop = auth()->user()->name ?? null;
-        $userId = auth()->user()->id ?? null;
+        $shop = $request->shop_domain ?? null;
+        $userId = $request->user_id ?? null;
 
         $data = ShopSetting::updateOrCreate(
             [

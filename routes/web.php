@@ -44,7 +44,7 @@ Route::middleware(['verify.shopify'])->group(function () {
     Route::get('/settings', [ShopSettingsController::class, 'index'])->name('settings');
     Route::post('/settings/authenticate', [ShopSettingsController::class, 'authenticateAndSave'])->name('authenticateAndSave');
     Route::post('/settings/save', [ShopSettingsController::class, 'store'])->name('savesettings');
-    Route::post('/updatesetting', [ShopSettingsController::class, 'updatesetting'])->name('updatesetting');
+    Route::post('/settings/update', [ShopSettingsController::class, 'updatesetting'])->name('updatesetting');
 
     // Shipment Routes
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments');

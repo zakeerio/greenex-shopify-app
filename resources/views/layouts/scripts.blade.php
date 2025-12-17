@@ -95,27 +95,49 @@
             $(document).on("click", "#SaveAccountSettings", function(e) {
                 e.preventDefault();
 
-                $.ajax({
-                    url: "{{ route('updatesetting') }}",
-                    method: "POST",
-                    headers: {
-                        'X-CSRF-TOKEN': token
-                    },
-                    data: {
+                var formdata = {
+                        shop_domain: "{{ auth()->user()->name ?? 'default-shop' }}",
+                        user_id: "{{ auth()->user()->id ?? '' }}",
                         fulfillment_location: $("#fullfilment").val(),
                         fragile : $("#Fragile").val(),
                         insurance : $("#Insurance").val(),
                         account_type : $("#accounttype").val(),
                         auto_push_orders : $("#auto_push_orders").val(),
                         price : $("#price").val(),
+                    };
+
+                console.log(formdata);
+
+                $.ajax({
+                    url: "{{ route('updatesetting') }}",
+                    type: "POST",
+                    data: formdata,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function(res) {
                         alert("✅ " + res.message);
                     },
-                    error: function(err) {
+                    error: function(xhr) {
+                        console.log(xhr.responseText);
                         alert("❌ Failed to save settings");
                     }
                 });
+
+                // $.ajax({
+                //     url: "{{ route('updatesetting') }}",
+                //     method: "POST",
+                //     headers: {
+                //         'X-CSRF-TOKEN': token
+                //     },
+                //     data: formdata,
+                //     success: function(res) {
+                //         alert("✅ " + res.message);
+                //     },
+                //     error: function(err) {
+                //         alert("❌ Failed to save settings");
+                //     }
+                // });
             });
         });
 

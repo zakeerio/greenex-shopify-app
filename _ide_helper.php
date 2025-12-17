@@ -16920,16 +16920,6 @@ namespace Illuminate\Support\Facades {
             \Illuminate\Routing\ResponseFactory::flushMacros();
         }
 
-        /**
-         * @see \App\Providers\AppServiceProvider::boot()
-         * @param mixed $response
-         * @static
-         */
-        public static function shopifyFrameHeaders($response)
-        {
-            return \Illuminate\Routing\ResponseFactory::shopifyFrameHeaders($response);
-        }
-
             }
     /**
      * @method static \Illuminate\Routing\RouteRegistrar attribute(string $key, mixed $value)
@@ -23860,20 +23850,6 @@ namespace Illuminate\Routing {
             //Method inherited from \Illuminate\Routing\UrlGenerator 
             /** @var \Osiset\ShopifyApp\Macros\TokenRoute $instance */
             return $instance->__invoke($route, $params, $absolute);
-        }
-
-            }
-    /**
-     */
-    class ResponseFactory {
-        /**
-         * @see \App\Providers\AppServiceProvider::boot()
-         * @param mixed $response
-         * @static
-         */
-        public static function shopifyFrameHeaders($response)
-        {
-            return \Illuminate\Routing\ResponseFactory::shopifyFrameHeaders($response);
         }
 
             }

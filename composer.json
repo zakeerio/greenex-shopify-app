@@ -7,19 +7,13 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-<<<<<<< HEAD
         "firebase/php-jwt": "^6.11",
-=======
->>>>>>> d1f29a032feed5c78daff264261fdcbe21a7c8a8
         "kyon147/laravel-shopify": "^25.1",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1"
     },
     "require-dev": {
-<<<<<<< HEAD
         "barryvdh/laravel-ide-helper": "^3.6",
-=======
->>>>>>> d1f29a032feed5c78daff264261fdcbe21a7c8a8
         "fakerphp/faker": "^1.23",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",

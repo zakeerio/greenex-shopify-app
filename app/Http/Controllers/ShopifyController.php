@@ -21,8 +21,6 @@ class ShopifyController extends Controller
 
         $shop = Auth::user();
 
-        // dd($shop);
-
         if (!$shop) {
             return response()->json([
                 'error' => 'Shop not authenticated',
@@ -34,8 +32,8 @@ class ShopifyController extends Controller
             // $response = $shop->api()->rest('GET', '/orders.json');
             // return $response['body']['orders'];
 
-            $response = $shop->api()->rest('GET', "/admin/api/{$version}/orders.json", ['limit' => 5]);
-            // dd($response['body']['container']['orders']);
+            $response = $shop->api()->rest('GET', "/admin/api/{$version}/orders.json", ['limit' => 100]);
+            dd($response['body']['container']['orders']);
 
             // if (!isset($response['body']['container']['orders'])) {
             //     return response()->json(['error' => 'Failed to fetch orders 1234 '], 500);
@@ -53,14 +51,18 @@ class ShopifyController extends Controller
 
     public function dashboard(Request $request)
     {
+
         $backendApiUrl = env('BACKEND_API_URL');
         $backendApiKey = env('BACKEND_API_API'); // FIXED ENV NAME
+
+        $user_id = auth()->user()->id;
+        $user = ShopSetting::where('user_id', $user_id)->first();
 
         try {
 
             // Hardcoded data for testing
 
-            // $data1 = [
+            // $data = [
             //     "t_parcel" => 35,
             //     "t_delivered" => 2,
             //     "t_return" => 1,
@@ -128,10 +130,6 @@ class ShopifyController extends Controller
                 'verify' => false, // only for local SSL issues
             ]);
 
-            // dd($backendApiUrl . '/dashboard');
-
-            $user_id = auth()->user()->id;
-            $user = ShopSetting::where('user_id', $user_id)->first();
 
             $token = $user->api_token;
 

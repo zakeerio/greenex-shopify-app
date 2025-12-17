@@ -77,7 +77,7 @@ class ShipmentController extends Controller
     =============================== */
     public function details($id)
     {
-        $response = $this->request('GET', "/parcel/details/{$id}");
+        $response = $this->request('GET', $this->backendApiUrl ."/parcel/details/{$id}");
 
         $shipment = $response['data'] ?? null;
 
@@ -89,7 +89,7 @@ class ShipmentController extends Controller
     =============================== */
     public function edit($id)
     {
-        $response = $this->request('GET', "/parcel/details/{$id}");
+        $response = $this->request('GET', $this->backendApiUrl ."/parcel/details/{$id}");
 
         $shipment = $response['data'] ?? null;
 
