@@ -107,7 +107,7 @@ return [
 
 
     'backend_api_url' => env('BACKEND_API_URL', 'https://api.example.com'),
-    'backend_api_key' => env('BACKEND_API_API', 'https://api.example.com'),
+    'backend_api_key' => env('BACKEND_API_KEY', 'https://api.example.com'),
 
     /*
     |--------------------------------------------------------------------------

@@ -15,8 +15,8 @@ class ShipmentController extends Controller
 
     public function __construct()
     {
-        $this->backendApiUrl = env('BACKEND_API_URL');
-        $this->backendApiKey = env('BACKEND_API_API');
+        $this->backendApiUrl = config('app.backend_api_url');
+        $this->backendApiKey = config('app.backend_api_key');
 
         $this->client = new Client([
             'verify' => false, // local SSL issue fix

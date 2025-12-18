@@ -40,8 +40,8 @@ class ShopSettingsController extends Controller
             'price' => 'nullable|numeric',
         ]);
 
-        $backendApiUrl = env('BACKEND_API_URL');
-        $backendApiKey = env('BACKEND_API_API');
+        $backendApiUrl = config('app.backend_api_url');
+        $backendApiKey = config('app.backend_api_key');
 
         try {
             $client = new Client([

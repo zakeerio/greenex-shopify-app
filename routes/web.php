@@ -2,12 +2,12 @@
 
 use App\Http\Controllers\ShopifyController;
 use Illuminate\Support\Facades\Route;
-
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ShopifyAuthController;
-
 use App\Http\Controllers\ShopifyWebhookController;
 use App\Http\Controllers\ShopSettingsController;
 use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\OrderController;
 
 Route::post('/webhooks/app-uninstalled', [ShopifyWebhookController::class, 'appUninstalled']);
 Route::post('/webhooks/order-create', [ShopifyWebhookController::class, 'orderCreate']);
@@ -31,6 +31,8 @@ Route::post('/webhooks/fulfillment-create', [ShopifyWebhookController::class, 'f
 
 
 
+
+
 // Embedded app home
 Route::middleware(['verify.shopify'])->group(function () {
 
@@ -38,7 +40,7 @@ Route::middleware(['verify.shopify'])->group(function () {
     Route::get('/dashboard', [ShopifyController::class, 'dashboard'])->name('dashboard');
 
 
-    Route::get('/orders', [ShopifyController::class, 'fetchOrders'])->name('orders');
+    //Route::get('/orders', [ShopifyController::class, 'fetchOrders'])->name('orders');
 
     // Shop Settings Routes
     Route::get('/settings', [ShopSettingsController::class, 'index'])->name('settings');
@@ -59,5 +61,37 @@ Route::middleware(['verify.shopify'])->group(function () {
     // Route::get('parcel/filter',   [ShipmentController::class, 'filter'])->name('parcel.filter');
     // Route::get('parcel/{id}/status/{statusId}', [ShipmentController::class, 'updateStatus'])->name('parcel.updateStatus');
     // Route::delete('parcel/delete/{id}',  [ShipmentController::class, 'destroy'])->name('parcel.delete');
+
+
+
+    // Orders routes
+
+    // Main orders page
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders');
+
+    // Fetch orders from Shopify (can be used for AJAX refresh)
+    Route::get('/orders/fetch', [OrderController::class, 'fetchOrders'])->name('orders.fetch');
+
+    // Send orders to external API
+    Route::post('/orders/send', [OrderController::class, 'sendOrders'])->name('orders.send');
+
+    // Individual order routes
+    // Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+    // Route::put('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
+    // Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+
+
+    // Process and send selected orders with Guzzle
+    Route::post('/orders/process-selected', [OrderController::class, 'processSelectedOrders'])->name('orders.process-selected');
+
+    // Route::get('/orders/updateshopifyorder', [OrderController::class, 'updateShopifyOrder'])
+    //     ->name('updateShopifyOrder');
+
+
+    // Route::get('/orders/process-selected', [OrderController::class, 'processSelectedOrders'])->name('orders.process-selected');
+
+    // View sent orders history
+    Route::get('/orders/sent', [OrderController::class, 'sentOrders'])->name('orders.sent');
 
 });
