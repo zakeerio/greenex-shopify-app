@@ -34,7 +34,9 @@
                                 $lineItems = $order['line_items'] ?? [];
                                 $pieces = array_sum(array_column($lineItems, 'quantity'));
                                 $weight = array_sum(array_column($lineItems, 'grams')) / 1000; // grams → KG
-                                $paymentType = $order['financial_status'] == 'paid' ? 'Prepaid' : 'COD';
+                                $paymentType =
+                                    $order['payment_type'] ??
+                                    ($order['financial_status'] == 'paid' ? 'PREPAID' : 'COD');
                                 $shipping = $order['shipping_address'] ?? [];
                                 $orderData = [
                                     'id' => $order['id'],
@@ -49,6 +51,13 @@
                                     'payment_type' => $paymentType,
                                     'pieces' => $pieces,
                                     'weight' => $weight,
+                                    'can_be_processed' => $order['can_be_processed'] ?? false,
+                                    'already_sent' => $order['already_sent'] ?? false,
+                                    'already_fulfilled' => $order['already_fulfilled'] ?? false,
+                                    'currency' => $order['currency'] ?? 'USD',
+                                    'total_tax' => $order['total_tax'] ?? 0,
+                                    'discount_codes' => $order['discount_codes'] ?? [],
+                                    'merchant_id' => $order['merchant_id'] ?? $order['id'],
                                 ];
                             @endphp
 
@@ -89,7 +98,8 @@
                                     value="{{ $shipping['phone'] ?? ($order['phone'] ?? '') }}">
                                 <input type="hidden" class="line_items" name="line_items[]"
                                     value="{{ json_encode($order['line_items'] ?? []) }}">
-                                <input type="hidden" class="shipping_address" name="shipping_address[]" value="{{ json_encode($shipping) }}">
+                                <input type="hidden" class="shipping_address" name="shipping_address[]"
+                                    value="{{ json_encode($shipping) }}">
                                 <input type="hidden" class="name" name="name[]" value="{{ $shipping['name'] ?? '' }}">
                                 <input type="hidden" class="note" name="note[]" value="{{ $order['note'] ?? '' }}">
                             </tr>

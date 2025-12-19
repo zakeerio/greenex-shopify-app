@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-
 use App\Models\ShopSetting;
 use App\Http\Controllers\Controller;
 use GuzzleHttp\Client;
@@ -14,6 +13,9 @@ use Osiset\ShopifyApp\Objects\Values\ShopDomain;
 
 class ShopifyController extends Controller
 {
+    protected $backendApiUrl;
+    protected $backendApiKey;
+    protected $version;
     //
     // public function fetchOrders(Request $request)
     // {
@@ -50,73 +52,79 @@ class ShopifyController extends Controller
     // }
 
     // sendOrders
-//     public function sendOrders(Request $request)
-// {
-//     $request->validate([
-//         'orders' => 'required|array|min:1',
-//     ]);
+    //     public function sendOrders(Request $request)
+    // {
+    //     $request->validate([
+    //         'orders' => 'required|array|min:1',
+    //     ]);
 
-//     $user = Auth::user();
+    //     $user = Auth::user();
 
-//     if (!$user) {
-//         return response()->json([
-//             'error' => 'Shop not authenticated'
-//         ], 401);
-//     }
+    //     if (!$user) {
+    //         return response()->json([
+    //             'error' => 'Shop not authenticated'
+    //         ], 401);
+    //     }
 
-//     $shopSetting = ShopSetting::where('user_id', $user->id)->first();
+    //     $shopSetting = ShopSetting::where('user_id', $user->id)->first();
 
-//     if (!$shopSetting || !$shopSetting->api_token) {
-//         return response()->json([
-//             'error' => 'API token not found'
-//         ], 403);
-//     }
+    //     if (!$shopSetting || !$shopSetting->api_token) {
+    //         return response()->json([
+    //             'error' => 'API token not found'
+    //         ], 403);
+    //     }
 
-//     try {
+    //     try {
 
-//         $client = new Client([
-//             'verify' => false, // ⚠️ only local
-//             'timeout' => 30,
-//         ]);
+    //         $client = new Client([
+    //             'verify' => false, // ⚠️ only local
+    //             'timeout' => 30,
+    //         ]);
 
-//         $response = $client->post(
-//             env('BACKEND_API_URL') . '/order/save',
-//             [
-//                 'headers' => [
-//                     'Accept'        => 'application/json',
-//                     'apiKey'        => env('BACKEND_API_KEY'),
-//                     'Authorization' => 'Bearer ' . $shopSetting->api_token,
-//                 ],
-//                 'json' => [
-//                     'orders' => $request->orders
-//                 ]
-//             ]
-//         );
+    //         $response = $client->post(
+    //             env('BACKEND_API_URL') . '/order/save',
+    //             [
+    //                 'headers' => [
+    //                     'Accept'        => 'application/json',
+    //                     'apiKey'        => env('BACKEND_API_KEY'),
+    //                     'Authorization' => 'Bearer ' . $shopSetting->api_token,
+    //                 ],
+    //                 'json' => [
+    //                     'orders' => $request->orders
+    //                 ]
+    //             ]
+    //         );
 
-//         $result = json_decode($response->getBody()->getContents(), true);
+    //         $result = json_decode($response->getBody()->getContents(), true);
 
-//         return response()->json([
-//             'success' => true,
-//             'data'    => $result
-//         ]);
+    //         return response()->json([
+    //             'success' => true,
+    //             'data'    => $result
+    //         ]);
 
-//     } catch (\Throwable $e) {
+    //     } catch (\Throwable $e) {
 
-//         return response()->json([
-//             'success' => false,
-//             'message' => $e->getMessage()
-//         ], 500);
-//     }
-// }
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
-
+    public function __construct()
+    {
+        $this->backendApiUrl = config('app.backend_api_url');
+        $this->backendApiKey = config('app.backend_api_key');
+        $this->version = config('shopify-app.api_version');
+    }
     public function dashboard(Request $request)
     {
 
-        $backendApiUrl = env('BACKEND_API_URL');
-        $backendApiKey = env('BACKEND_API_API'); // FIXED ENV NAME
 
-        $user_id = auth()->user()->id;
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        $user_id = Auth::user()->id;
         $user = ShopSetting::where('user_id', $user_id)->first();
 
         try {
@@ -194,9 +202,9 @@ class ShopifyController extends Controller
 
             $token = $user->api_token;
 
-            $response = $client->request('GET', $backendApiUrl . '/dashboard', [
+            $response = $client->request('GET', $this->backendApiUrl . '/dashboard', [
                 'headers' => [
-                    'apiKey' => $backendApiKey,
+                    'apiKey' => $this->backendApiKey,
                     'Accept' => 'application/json',
                     'Authorization' => "Bearer $token",
                 ]
@@ -212,7 +220,4 @@ class ShopifyController extends Controller
             ], 500);
         }
     }
-
-
-
 }

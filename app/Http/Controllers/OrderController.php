@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Validator;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -24,22 +25,17 @@ class OrderController extends Controller
         $this->backendApiUrl = config('app.backend_api_url');
         $this->backendApiKey = config('app.backend_api_key');
         $this->version = config('shopify-app.api_version');
-        //
-        Log::debug('API Config from .env:', [
-            'url' => $this->backendApiUrl,
-            'key_set' => !empty($this->backendApiKey),
-            'key_preview' => $this->backendApiKey ? substr($this->backendApiKey, 0, 8) . '...' : 'NOT SET',
-        ]);
     }
-
 
     /**
      * Process and format raw Shopify orders
      */
-
     private function processOrders(array $orders): array
     {
-        return array_map(function ($order) {
+        $user = Auth::user();
+        $processedOrders = [];
+
+        foreach ($orders as $order) {
             // Convert ResponseAccess to array if needed
             if ($order instanceof \Gnikyt\BasicShopifyAPI\ResponseAccess) {
                 $order = $order->toArray();
@@ -53,7 +49,52 @@ class OrderController extends Controller
                 return $item;
             };
 
-            return [
+            // Determine Payment Type (COD vs PREPAID)
+            $gateways = $order['payment_gateway_names'] ?? [];
+            $isCod = false;
+            foreach ($gateways as $gateway) {
+                if (stripos($gateway, 'cash') !== false || stripos($gateway, 'cod') !== false) {
+                    $isCod = true;
+                    break;
+                }
+            }
+            $paymentType = $isCod ? 'COD' : 'PREPAID';
+
+            // Calculate total pieces and weight
+            $totalPieces = 0;
+            $totalWeight = 0;
+
+            foreach ($order['line_items'] ?? [] as $item) {
+                $item = $convertToArray($item);
+                $totalPieces += $item['quantity'] ?? 0;
+                $totalWeight += ($item['grams'] ?? 0) * ($item['quantity'] ?? 0);
+            }
+
+            // Convert weight to KG if in grams
+            if ($totalWeight > 0 && $totalWeight >= 10) {
+                $totalWeight = $totalWeight / 1000; // grams to kg
+            } elseif ($totalWeight <= 0) {
+                $totalWeight = 0.5; // default
+            }
+
+            $totalWeight = max(0.1, $totalWeight);
+
+            // Check if order already sent
+            $alreadySent = null;
+            if ($user) {
+                $alreadySent = SentOrder::where('user_id', $user->id)
+                    ->where('order_id', $order['id'])
+                    ->first();
+            }
+
+            // Check fulfillment status
+            $fulfillmentStatus = $order['fulfillment_status'] ?? null;
+            $isAlreadyFulfilled = $fulfillmentStatus === 'fulfilled';
+
+            // Check if order can be processed
+            $canBeProcessed = !$alreadySent && !$isAlreadyFulfilled;
+
+            $processedOrder = [
                 'id' => $order['id'] ?? null,
                 'order_number' => $order['order_number'] ?? null,
                 'name' => $order['name'] ?? null,
@@ -68,15 +109,31 @@ class OrderController extends Controller
                 'total_tax' => $order['total_tax'] ?? 0,
                 'currency' => $order['currency'] ?? 'USD',
                 'financial_status' => $order['financial_status'] ?? 'pending',
-                'fulfillment_status' => $order['fulfillment_status'] ?? null,
+                'fulfillment_status' => $fulfillmentStatus,
                 'cancelled_at' => $order['cancelled_at'] ?? null,
                 'cancel_reason' => $order['cancel_reason'] ?? null,
                 'note' => $order['note'] ?? null,
                 'note_attributes' => array_map($convertToArray, $order['note_attributes'] ?? []),
                 'tags' => $order['tags'] ?? '',
-                'merchant_id' => $order['id'] ?? null, // Shopify order ID as merchant_id
+                'merchant_id' => $order['id'] ?? null,
+                'payment_type' => $paymentType,
 
-                // Line items - handle possible ResponseAccess objects
+                // Calculated fields
+                'pieces' => $totalPieces,
+                'weight' => round($totalWeight, 2),
+
+                // Status tracking
+                'already_sent' => $alreadySent ? true : false,
+                'already_fulfilled' => $isAlreadyFulfilled,
+                'can_be_processed' => $canBeProcessed,
+                'sent_order_data' => $alreadySent ? [
+                    'tracking_id' => $alreadySent->tracking_id,
+                    'portal_order_id' => $alreadySent->portal_order_id,
+                    'status' => $alreadySent->status,
+                    'sent_at' => $alreadySent->sent_at
+                ] : null,
+
+                // Line items
                 'line_items' => array_map($convertToArray, $order['line_items'] ?? []),
 
                 // Shipping address
@@ -94,19 +151,19 @@ class OrderController extends Controller
                 // Discount codes
                 'discount_codes' => array_map($convertToArray, $order['discount_codes'] ?? []),
             ];
-        }, $orders);
+
+            $processedOrders[] = $processedOrder;
+        }
+
+        return $processedOrders;
     }
 
     /**
-     * Show orders index page
-     */
-    /**
-     * Show orders index page
+     * Show orders index page with pagination support
      */
     public function index(Request $request)
     {
         try {
-
             $shop = Auth::user();
 
             if (!$shop) {
@@ -124,61 +181,126 @@ class OrderController extends Controller
 
             // Optional: Get filters from request
             $params = [
-                'limit' => $request->get('limit', 50),
+                'limit' => $request->get('limit', 250), // Max 250 per request
                 'status' => $request->get('status', 'any'),
                 'financial_status' => $request->get('financial_status'),
                 'fulfillment_status' => $request->get('fulfillment_status'),
                 'created_at_min' => $request->get('created_at_min'),
                 'created_at_max' => $request->get('created_at_max'),
+                'fields' => $request->get('fields', 'id,order_number,name,contact_email,created_at,current_total_price,total_price,currency,financial_status,fulfillment_status,cancelled_at,note,tags,line_items,shipping_address,customer,shipping_lines,discount_codes'), // Specify fields for faster response
             ];
 
             // Remove null/empty values
             $params = array_filter($params);
 
-            // Fetch orders from Shopify
-            $response = $shop->api()->rest('GET', "/admin/api/{$this->version}/orders.json", $params);
+            // Check if we need to load all orders
+            $loadAll = $request->get('load_all', false);
+            $pageInfo = $request->get('page_info');
 
-            // Get orders safely from ResponseAccess object
-            $orders = [];
-
-            // Check if body exists in response
-            if (isset($response['body'])) {
-                $body = $response['body'];
-
-                // If body is a ResponseAccess object, convert it to array
-                if ($body instanceof \Gnikyt\BasicShopifyAPI\ResponseAccess) {
-                    $body = $body->toArray();
-                }
-
-                // Check different possible structures
-                if (isset($body['container']['orders'])) {
-                    $orders = $body['container']['orders'];
-                } elseif (isset($body['orders'])) {
-                    $orders = $body['orders'];
-                }
-
-                // If orders is still a ResponseAccess object, convert to array
-                if ($orders instanceof \Gnikyt\BasicShopifyAPI\ResponseAccess) {
-                    $orders = $orders->toArray();
-                }
+            if ($pageInfo) {
+                $params['page_info'] = $pageInfo;
             }
 
-            // Make sure $orders is actually an array
-            $orders = is_array($orders) ? $orders : [];
+            $allOrders = [];
+            $hasNextPage = false;
+            $nextPageInfo = null;
+            $totalOrders = 0;
 
-            Log::info('Raw orders data:', [
-                'orders_count' => count($orders),
-                'orders_type' => gettype($orders),
-                'sample_order_keys' => count($orders) > 0 ? array_keys($orders[0]) : 'No orders'
+            do {
+                // Fetch orders from Shopify
+                $response = $shop->api()->rest('GET', "/admin/api/{$this->version}/orders.json", $params);
+
+                // Get orders safely from ResponseAccess object
+                $orders = [];
+
+                // Check if body exists in response
+                if (isset($response['body'])) {
+                    $body = $response['body'];
+
+                    // If body is a ResponseAccess object, convert it to array
+                    if ($body instanceof \Gnikyt\BasicShopifyAPI\ResponseAccess) {
+                        $body = $body->toArray();
+                    }
+
+                    // Check different possible structures
+                    if (isset($body['container']['orders'])) {
+                        $orders = $body['container']['orders'];
+                    } elseif (isset($body['orders'])) {
+                        $orders = $body['orders'];
+                    }
+
+                    // If orders is still a ResponseAccess object, convert to array
+                    if ($orders instanceof \Gnikyt\BasicShopifyAPI\ResponseAccess) {
+                        $orders = $orders->toArray();
+                    }
+
+                    // Check for pagination info
+                    if (isset($body['container']['page_info'])) {
+                        $nextPageInfo = $body['container']['page_info'];
+                        $hasNextPage = true;
+                    } elseif (isset($response['link'])) {
+                        // Parse link header for pagination
+                        $linkHeader = $response['link'];
+                        if (str_contains($linkHeader, 'rel="next"')) {
+                            $hasNextPage = true;
+                            // Extract page_info from URL
+                            if (preg_match('/page_info=([^&>]+)/', $linkHeader, $matches)) {
+                                $nextPageInfo = $matches[1];
+                            }
+                        }
+                    }
+                }
+
+                // Make sure $orders is actually an array
+                $orders = is_array($orders) ? $orders : [];
+
+                // Add to all orders array
+                $allOrders = array_merge($allOrders, $orders);
+                $totalOrders += count($orders);
+
+                Log::info('Fetched page of orders:', [
+                    'page_orders' => count($orders),
+                    'total_so_far' => count($allOrders),
+                    'has_next_page' => $hasNextPage,
+                    'next_page_info' => $nextPageInfo ? substr($nextPageInfo, 0, 20) . '...' : null
+                ]);
+
+                // Prepare for next page if loadAll is true
+                if ($loadAll && $hasNextPage && $nextPageInfo) {
+                    $params['page_info'] = $nextPageInfo;
+                    $hasNextPage = false; // Reset for loop
+
+                    // Add small delay to avoid rate limiting
+                    if (count($allOrders) > 100) {
+                        usleep(100000); // 100ms delay after 100 orders
+                    }
+                } else {
+                    break;
+                }
+            } while ($loadAll);
+
+            Log::info('Total orders fetched from Shopify:', [
+                'total_orders' => count($allOrders),
+                'pages_fetched' => ceil(count($allOrders) / $params['limit']),
+                'load_all' => $loadAll
             ]);
 
             // Process and format orders if needed
-            $processedOrders = $this->processOrders($orders);
+            $processedOrders = $this->processOrders($allOrders);
 
             Log::info('Orders fetched successfully', [
-                'total_orders' => count($orders),
+                'total_orders' => count($processedOrders),
                 'processed_orders' => count($processedOrders)
             ]);
+
+            // Prepare pagination data for response
+            $pagination = [
+                'has_next_page' => $hasNextPage,
+                'next_page_info' => $nextPageInfo,
+                'current_count' => count($processedOrders),
+                'total_fetched' => $totalOrders,
+                'limit' => $params['limit']
+            ];
 
             // If it's an AJAX request, return JSON
             if ($request->ajax() || $request->wantsJson()) {
@@ -186,6 +308,7 @@ class OrderController extends Controller
                     'success' => true,
                     'orders' => $processedOrders,
                     'total' => count($processedOrders),
+                    'pagination' => $pagination,
                     'message' => 'Orders fetched successfully'
                 ]);
             }
@@ -193,9 +316,9 @@ class OrderController extends Controller
             // For regular request, return view
             return view('orders', [
                 'orders' => $processedOrders,
-                'totalOrders' => count($processedOrders)
+                'totalOrders' => count($processedOrders),
+                'pagination' => $pagination
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to fetch orders from Shopify', [
                 'error' => $e->getMessage(),
@@ -215,157 +338,14 @@ class OrderController extends Controller
             return view('orders', [
                 'orders' => [],
                 'totalOrders' => 0,
+                'pagination' => [],
                 'error' => 'Failed to fetch orders: ' . $e->getMessage()
             ]);
         }
     }
 
-
     /**
-     * Send orders to external API
-     */
-    public function sendOrders(Request $request)
-    {
-        // Log incoming request for debugging
-        Log::info('Send Orders Request Received:', [
-            'user_id' => Auth::id(),
-            'orders_count' => count($request->orders ?? []),
-            'ip' => $request->ip()
-        ]);
-
-        // Validate request
-        $validator = Validator::make($request->all(), [
-            'orders' => 'required|array|min:1',
-            'orders.*.merchant_id' => 'required|string',
-            'orders.*.total_price' => 'required|numeric|min:0',
-            'orders.*.line_items' => 'required|array',
-            'orders.*.shipping_address' => 'required|array',
-            'orders.*.phone' => 'nullable|string',
-            'orders.*.name' => 'required|string|max:255',
-            'orders.*.email' => 'nullable|email',
-            'orders.*.order_number' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            Log::error('Order validation failed:', $validator->errors()->toArray());
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Check authentication
-        $user = Auth::user();
-        if (!$user) {
-            Log::warning('Unauthenticated order send attempt');
-            return response()->json([
-                'success' => false,
-                'message' => 'Authentication required'
-            ], 401);
-        }
-
-        // Get shop settings with API token
-        $shopSetting = ShopSetting::where('user_id', $user->id)->first();
-
-        if (!$shopSetting) {
-            Log::error('Shop settings not found for user:', ['user_id' => $user->id]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Shop configuration not found. Please configure your shop settings first.'
-            ], 404);
-        }
-
-        if (!$shopSetting->api_token) {
-            Log::error('API token missing for shop:', ['shop_id' => $shopSetting->id]);
-            return response()->json([
-                'success' => false,
-                'message' => 'API token not configured. Please set up your API token in shop settings.'
-            ], 403);
-        }
-
-        try {
-            // Prepare data for external API
-            $payload = [
-                'orders' => $request->orders,
-                'shop_id' => $shopSetting->id,
-                'user_id' => $user->id,
-                'timestamp' => now()->toISOString()
-            ];
-
-            Log::info('Sending orders to external API:', [
-                'url' => config('services.backend_api.url') . '/order/save',
-                'orders_count' => count($request->orders),
-                'shop_id' => $shopSetting->id
-            ]);
-
-            // Send to external API using Laravel HTTP client
-            $response = Http::withOptions([
-                'verify' => config('app.env') === 'production' ? true : false,
-                'timeout' => 60,
-                'connect_timeout' => 30,
-            ])->withHeaders([
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-                'apiKey' => config('services.backend_api.key'),
-                'Authorization' => 'Bearer ' . $shopSetting->api_token,
-            ])->post(config('services.backend_api.url') . '/order/save', $payload);
-
-            $responseBody = $response->json();
-            $statusCode = $response->status();
-
-            Log::info('External API response:', [
-                'status' => $statusCode,
-                'response' => $responseBody
-            ]);
-
-            if ($response->successful()) {
-                // Log successful order submission
-                Log::info('Orders sent successfully:', [
-                    'order_numbers' => array_column($request->orders, 'order_number'),
-                    'external_response' => $responseBody
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Orders sent successfully',
-                    'data' => $responseBody,
-                    'orders_sent' => count($request->orders)
-                ]);
-            } else {
-                Log::error('External API error:', [
-                    'status' => $statusCode,
-                    'response' => $responseBody
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'External API error: ' . ($responseBody['message'] ?? 'Unknown error'),
-                    'status_code' => $statusCode,
-                    'response' => $responseBody
-                ], $statusCode);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Order sending failed:', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to send orders: ' . $e->getMessage(),
-                'error_type' => get_class($e)
-            ], 500);
-        }
-    }
-
-
-
-    /**
-     * NEW: Process selected orders and send to portal with Guzzle - UPDATED
+     * Process selected orders and send to portal with Guzzle - UPDATED
      */
     public function processSelectedOrders(Request $request)
     {
@@ -374,7 +354,6 @@ class OrderController extends Controller
             'user_id' => Auth::id(),
             'selected_count' => count($request->selected_orders ?? []),
             'timestamp' => now(),
-            'sample_data' => $request->selected_orders[0] ?? 'No data'
         ]);
 
         // Validate request
@@ -424,7 +403,6 @@ class OrderController extends Controller
             'shop_id' => $shopSetting->id,
             'shop_name' => $shopSetting->shop_name,
             'api_token_exists' => !empty($shopSetting->api_token),
-            'api_token_length' => strlen($shopSetting->api_token ?? '')
         ]);
 
         try {
@@ -439,74 +417,163 @@ class OrderController extends Controller
                 ]);
 
                 try {
-                    // Transform order data for portal
+                    // ========== CHECK 1: DUPLICATE IN DATABASE ==========
+                    $alreadySent = SentOrder::where('user_id', $user->id)
+                        ->where('order_id', $selectedOrder['order_id'])
+                        ->first();
+
+                    if ($alreadySent) {
+                        Log::warning('❌ DUPLICATE: Order already sent', [
+                            'order_id' => $selectedOrder['order_id'],
+                            'order_number' => $selectedOrder['order_number'],
+                            'sent_order_id' => $alreadySent->id,
+                            'sent_at' => $alreadySent->sent_at
+                        ]);
+
+                        $failedOrders[] = [
+                            'order_number' => $selectedOrder['order_number'],
+                            'reason' => 'Order already sent to portal',
+                            'details' => 'Sent on: ' . $alreadySent->sent_at,
+                            'tracking_id' => $alreadySent->tracking_id,
+                            'type' => 'duplicate'
+                        ];
+                        continue;
+                    }
+
+                    // ========== CHECK 2: SHOPIFY FULFILLMENT STATUS ==========
+                    $shopifyOrder = $user->api()->rest(
+                        'GET',
+                        "/admin/api/{$this->version}/orders/{$selectedOrder['order_id']}.json"
+                    );
+
+                    $fulfillmentStatus = $shopifyOrder['body']['order']['fulfillment_status'] ?? null;
+
+                    if ($fulfillmentStatus === 'fulfilled') {
+                        Log::warning('❌ FULFILLED: Shopify order already fulfilled', [
+                            'order_id' => $selectedOrder['order_id'],
+                            'order_number' => $selectedOrder['order_number'],
+                            'fulfillment_status' => $fulfillmentStatus
+                        ]);
+
+                        $failedOrders[] = [
+                            'order_number' => $selectedOrder['order_number'],
+                            'reason' => 'Order already fulfilled in Shopify',
+                            'details' => 'Cannot send already fulfilled orders',
+                            'type' => 'already_fulfilled'
+                        ];
+                        continue;
+                    }
+
+                    // ========== CHECK 3: ORDER CANCELLED ==========
+                    $cancelledAt = $shopifyOrder['body']['order']['cancelled_at'] ?? null;
+                    if ($cancelledAt) {
+                        Log::warning('❌ CANCELLED: Order is cancelled', [
+                            'order_id' => $selectedOrder['order_id'],
+                            'order_number' => $selectedOrder['order_number']
+                        ]);
+
+                        $failedOrders[] = [
+                            'order_number' => $selectedOrder['order_number'],
+                            'reason' => 'Order is cancelled in Shopify',
+                            'type' => 'cancelled'
+                        ];
+                        continue;
+                    }
+
+                    // ========== ALL CHECKS PASSED - PROCESS ORDER ==========
+                    Log::info('✅ NEW: Order passed all checks, proceeding...', [
+                        'order_number' => $selectedOrder['order_number'],
+                        'order_id' => $selectedOrder['order_id']
+                    ]);
+
+                    // Transform for portal
                     $portalData = $this->transformOrderForPortal(
                         $selectedOrder,
                         $shopSetting
                     );
-                        dd($portalData);
-                    Log::debug('Portal data prepared:', [
-                        'order_number' => $portalData['order_number'],
-                        'shop_name' => $portalData['shop_name'],
-                        'total_amount' => $portalData['order_details']['total_amount']
-                    ]);
 
-                    // Send to portal using Guzzle
+                    // Send to portal
                     $response = $this->sendToPortal($portalData, $shopSetting->api_token);
 
                     if ($response['success']) {
-                        // Save to database as sent order
-                        $sentOrder = SentOrder::create([
-                            'user_id' => $user->id,
-                            'shop_setting' => $shopSetting,
-                            'order_id' => $selectedOrder['order_id'],
-                            'order_number' => $selectedOrder['order_number'],
-                            'portal_reference' => $response['reference'] ?? null,
-                            'portal_response' => $response['portal_response'] ?? $response,
-                            'collect_payment' => $selectedOrder['collect_payment'],
-                            'status' => 'sent',
-                            'sent_at' => now()
-                        ]);
+                        // Use database transaction for atomic operations
+                        DB::beginTransaction();
 
-                        // Update Shopify with tracking and fulfillment
-                        $shopifyUpdated = $this->updateShopifyOrder(
-                            $user,
-                            $selectedOrder['order_id'],
-                            $response
-                        );
+                        try {
+                            // ✅ SAVE TO DATABASE FIRST (tracking ID)
+                            $sentOrder = SentOrder::create([
+                                'user_id' => $user->id,
+                                'shop_setting_id' => $shopSetting->id,
+                                'order_id' => $selectedOrder['order_id'],
+                                'order_number' => $selectedOrder['order_number'],
+                                'portal_reference' => $response['reference'] ?? null,
+                                'tracking_id' => $response['tracking_id'] ?? null,
+                                'portal_order_id' => $response['portal_order_id'] ?? null,
+                                'portal_response' => $response['portal_response'] ?? $response,
+                                'collect_payment' => $selectedOrder['collect_payment'],
+                                'status' => 'sent',
+                                'sent_at' => now()
+                            ]);
 
-                        if ($shopifyUpdated) {
-                            $sentOrder->update(['status' => 'confirmed']);
+                            Log::info('✅ DATABASE: Sent order saved', [
+                                'sent_order_id' => $sentOrder->id,
+                                'tracking_id' => $sentOrder->tracking_id,
+                                'portal_order_id' => $sentOrder->portal_order_id
+                            ]);
+
+                            // ✅ UPDATE SHOPIFY (with tracking ID)
+                            $shopifyUpdated = $this->updateShopifyOrder(
+                                $user,
+                                $selectedOrder['order_id'],
+                                $response
+                            );
+
+                            if ($shopifyUpdated) {
+                                $sentOrder->update([
+                                    'status' => 'confirmed',
+                                    'shopify_updated' => true,
+                                    'shopify_updated_at' => now()
+                                ]);
+
+                                Log::info('✅ SHOPIFY: Order updated successfully', [
+                                    'order_id' => $selectedOrder['order_id'],
+                                    'tracking_id' => $sentOrder->tracking_id
+                                ]);
+                            } else {
+                                Log::warning('⚠️ SHOPIFY: Order update failed but portal sent', [
+                                    'order_id' => $selectedOrder['order_id']
+                                ]);
+                            }
+
+                            DB::commit();
+
+                            $processedOrders[] = [
+                                'order_number' => $selectedOrder['order_number'],
+                                'tracking_id' => $sentOrder->tracking_id,
+                                'portal_order_id' => $sentOrder->portal_order_id,
+                                'sent_order_id' => $sentOrder->id,
+                                'shopify_updated' => $shopifyUpdated,
+                                'message' => 'Successfully processed'
+                            ];
+                        } catch (\Exception $dbException) {
+                            DB::rollBack();
+                            throw $dbException;
                         }
-
-                        $processedOrders[] = [
-                            'order_number' => $selectedOrder['order_number'],
-                            'tracking_id' => $response['portal_response']['tracking_id'] ?? null,
-                            'portal_order_id' => $response['portal_response']['id'] ?? null,
-                            'sent_order_id' => $sentOrder->id,
-                            'shopify_updated' => $shopifyUpdated
-                        ];
-
-                        Log::info('Order processed successfully:', [
-                            'order_number' => $selectedOrder['order_number'],
-                            'sent_order_id' => $sentOrder->id,
-                            'tracking_id' => $response['portal_response']['tracking_id'] ?? 'N/A'
-                        ]);
                     } else {
+                        Log::error('❌ PORTAL: Failed to send to portal', [
+                            'order_number' => $selectedOrder['order_number'],
+                            'portal_response' => $response
+                        ]);
+
                         $failedOrders[] = [
                             'order_number' => $selectedOrder['order_number'],
                             'reason' => $response['message'] ?? 'Portal processing failed',
-                            'details' => $response
+                            'details' => $response,
+                            'type' => 'portal_error'
                         ];
-
-                        Log::error('Order processing failed:', [
-                            'order_number' => $selectedOrder['order_number'],
-                            'response' => $response
-                        ]);
                     }
-
                 } catch (\Exception $e) {
-                    Log::error('Error processing order:', [
+                    Log::error('❌ EXCEPTION: Error processing order', [
                         'order_number' => $selectedOrder['order_number'],
                         'error' => $e->getMessage(),
                         'file' => $e->getFile(),
@@ -515,7 +582,8 @@ class OrderController extends Controller
 
                     $failedOrders[] = [
                         'order_number' => $selectedOrder['order_number'],
-                        'reason' => $e->getMessage()
+                        'reason' => $e->getMessage(),
+                        'type' => 'exception'
                     ];
                 }
             }
@@ -529,14 +597,14 @@ class OrderController extends Controller
                 'summary' => [
                     'total_selected' => count($request->selected_orders),
                     'successful' => count($processedOrders),
-                    'failed' => count($failedOrders)
+                    'failed' => count($failedOrders),
+                    'failed_types' => array_count_values(array_column($failedOrders, 'type'))
                 ]
             ];
 
             Log::info('Order processing completed:', $responseData['summary']);
 
             return response()->json($responseData);
-
         } catch (\Exception $e) {
             Log::error('Order processing failed:', [
                 'error' => $e->getMessage(),
@@ -552,7 +620,6 @@ class OrderController extends Controller
 
     /**
      * Transform order data for portal format
-     * (OLD VERSION STRUCTURE + NEW CALCULATIONS & LOGGING)
      */
     private function transformOrderForPortal($orderData, $shopSetting)
     {
@@ -561,7 +628,6 @@ class OrderController extends Controller
 
         if (empty($shopName)) {
             $shopName = Auth::user()->name ?? 'Unknown Shop';
-
             Log::warning('Shop name is empty, using fallback', [
                 'shop_setting_id' => $shopSetting->id,
                 'fallback_name'   => $shopName
@@ -569,10 +635,9 @@ class OrderController extends Controller
         }
 
         /* ---------------- PAYMENT LOGIC ---------------- */
-
-        $totalPrice    = (float) ($orderData['total_price'] ?? 0);
+        $totalPrice = (float) ($orderData['total_price'] ?? 0);
         $collectPayment = $orderData['collect_payment'] ?? 'no';
-        $paymentType    = strtoupper($orderData['payment_type'] ?? 'PREPAID');
+        $paymentType = strtoupper($orderData['payment_type'] ?? 'PREPAID');
 
         $cashCollection = 0;
         if ($paymentType === 'COD' && $collectPayment === 'yes') {
@@ -580,7 +645,6 @@ class OrderController extends Controller
         }
 
         /* ---------------- WEIGHT LOGIC ---------------- */
-
         $weight = $orderData['weight'] ?? 0;
 
         if ($weight > 0 && $weight >= 10) {
@@ -593,16 +657,13 @@ class OrderController extends Controller
         $weight = max(0.1, $weight);
 
         /* ---------------- PHONE FORMAT ---------------- */
-
         $customerPhone = $orderData['phone'] ?? '';
         if (!empty($customerPhone) && !str_starts_with($customerPhone, '+')) {
             $customerPhone = $this->formatPhoneNumber($customerPhone);
         }
 
         /* ---------------- PORTAL PAYLOAD ---------------- */
-
         $portalPayload = [
-
             'merchant_order_id' => $orderData['order_id']
                 ?? $orderData['merchant_id']
                 ?? null,
@@ -632,14 +693,16 @@ class OrderController extends Controller
             /* ---------- ORDER DETAILS (NESTED) ---------- */
             'order_details' => [
                 'total_amount'   => $totalPrice,
-                'currency'       => 'USD',
+                'currency'       => $orderData['currency'] ?? 'USD',
                 'total_pieces'   => $orderData['pieces'] ?? 0,
                 'total_weight'   => $weight,
                 'payment_type'   => $paymentType === 'COD' ? 'cod' : 'prepaid',
-                'collect_payment'=> $collectPayment,
-                'cash_collection'=> $cashCollection,
+                'collect_payment' => $collectPayment,
+                'cash_collection' => $cashCollection,
                 'order_date'     => now()->toISOString(),
                 'note'           => $orderData['note'] ?? '',
+                'discount_codes' => $orderData['discount_codes'] ?? [],
+                'tax_amount'     => $orderData['total_tax'] ?? 0,
             ],
 
             /* ---------- LINE ITEMS (NESTED ARRAY) ---------- */
@@ -653,6 +716,7 @@ class OrderController extends Controller
                     'sku'        => $item['sku'] ?? '',
                     'grams'      => $item['grams'] ?? 0,
                     'vendor'     => $item['vendor'] ?? '',
+                    'total_discount' => $item['total_discount'] ?? 0,
                 ];
             }, $orderData['line_items'] ?? []),
 
@@ -661,12 +725,11 @@ class OrderController extends Controller
                 'source_name'           => 'shopify_app',
                 'processed_by'          => Auth::user()->name ?? 'system',
                 'processing_timestamp'  => now()->toISOString(),
+                'shopify_order_id'      => $orderData['order_id'] ?? null,
             ],
         ];
 
-        /* ---------------- LOGGING ---------------- */
-
-        Log::info('Transformed portal payload (OLD STRUCTURE)', [
+        Log::info('Transformed portal payload', [
             'order_number'     => $portalPayload['order_number'],
             'shop_name'        => $shopName,
             'total_amount'     => $totalPrice,
@@ -701,49 +764,15 @@ class OrderController extends Controller
     }
 
     /**
-     * Format shipping address
+     * Send order data to portal using Guzzle
      */
-    private function formatAddress($shippingAddress)
-    {
-        $parts = [];
-
-        if (!empty($shippingAddress['address1'])) {
-            $parts[] = $shippingAddress['address1'];
-        }
-
-        if (!empty($shippingAddress['address2'])) {
-            $parts[] = $shippingAddress['address2'];
-        }
-
-        if (!empty($shippingAddress['city'])) {
-            $parts[] = $shippingAddress['city'];
-        }
-
-        if (!empty($shippingAddress['province'])) {
-            $parts[] = $shippingAddress['province'];
-        }
-
-        if (!empty($shippingAddress['zip'])) {
-            $parts[] = $shippingAddress['zip'];
-        }
-
-        if (!empty($shippingAddress['country'])) {
-            $parts[] = $shippingAddress['country'];
-        }
-
-        return implode(', ', $parts);
-    }
-
-    /**
- * Send order data to portal using Guzzle - FIXED
- */
-    private function sendToPortal($orderData, $apiToken)
+    private function sendToPortal($orderData, $apiToken): array
     {
         Log::info('Preparing to send order to portal:', [
             'portal_url' => $this->backendApiUrl . '/order/save',
             'order_number' => $orderData['order_number'] ?? 'N/A',
-            'customer_name' => $orderData['customer_name'] ?? 'N/A',
-            'total_amount' => $orderData['selling_price'] ?? 'N/A'
+            'customer_name' => $orderData['customer']['name'] ?? 'N/A',
+            'total_amount' => $orderData['order_details']['total_amount'] ?? 'N/A'
         ]);
 
         $client = new Client([
@@ -757,120 +786,112 @@ class OrderController extends Controller
         ]);
 
         try {
-            Log::debug('Sending portal request:', [
+            Log::debug('Sending portal request', [
                 'endpoint' => '/order/save',
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $apiToken,
-                    'apiKey' => $this->backendApiKey,
-                ],
-                'payload_summary' => [
-                    'order_number' => $orderData['order_number'],
-                    'customer_name' => $orderData['customer_name'],
-                    'customer_phone' => $orderData['customer_phone'],
-                    'selling_price' => $orderData['selling_price'],
-                    'cash_collection' => $orderData['cash_collection'],
-                    'weight' => $orderData['weight']
-                ]
+                'order_number' => $orderData['order_number'] ?? null,
             ]);
 
-            $response = $client->post('/order/save', [
+            $response = $client->post($this->backendApiUrl . '/order/save', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $apiToken,
-                    'apiKey' => $this->backendApiKey,
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
+                    'apiKey'        => $this->backendApiKey,
+                    'Accept'        => 'application/json',
+                    'Content-Type'  => 'application/json',
                 ],
                 'json' => $orderData,
-                'http_errors' => false
+                'http_errors' => false, // handle manually
             ]);
 
             $statusCode = $response->getStatusCode();
-            $body = json_decode($response->getBody()->getContents(), true);
+            $rawBody    = $response->getBody()->getContents();
+            $body       = json_decode($rawBody, true);
+            $databody = $body['data'];
 
-            Log::info('Portal API Response:', [
+            Log::info('Portal API Response', [
                 'status_code' => $statusCode,
-                'order_number' => $orderData['order_number'],
-                'response_has_tracking_id' => isset($body['tracking_id']),
-                'response_has_id' => isset($body['id']),
-                'response_keys' => array_keys($body)
+                'body' => $databody,
+                'order_number' => $orderData['order_number'] ?? null,
+                'json_error' => json_last_error_msg(),
+                'has_tracking_id' => is_array($databody) && isset($databody['tracking_id']),
+                'raw_preview' => substr($rawBody, 0, 500),
             ]);
 
-            if ($statusCode >= 200 && $statusCode < 300) {
-                return [
-                    'success' => true,
-                    'reference' => $body['tracking_id'] ?? $body['id'] ?? null,
-                    'tracking_id' => $body['tracking_id'] ?? null,
-                    'portal_order_id' => $body['id'] ?? null,
-                    'message' => 'Order sent successfully',
-                    'portal_response' => $body
-                ];
-            } else {
-                Log::error('Portal API Error:', [
+            // ❌ Invalid JSON (HTML / text response)
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($databody)) {
+                Log::error('Portal returned invalid JSON', [
+                    'order_number' => $orderData['order_number'] ?? null,
                     'status_code' => $statusCode,
-                    'response' => $body,
-                    'order_number' => $orderData['order_number']
+                    'json_error' => json_last_error_msg(),
+                    'raw_snippet' => substr($rawBody, 0, 200),
                 ]);
 
                 return [
                     'success' => false,
-                    'message' => $body['error'] ?? $body['message'] ?? 'Portal returned error',
+                    'message' => 'Portal returned invalid response (not JSON).',
                     'status_code' => $statusCode,
-                    'portal_response' => $body
                 ];
             }
 
-        } catch (RequestException $e) {
-            Log::error('Guzzle request failed:', [
-                'error' => $e->getMessage(),
-                'order_number' => $orderData['order_number'] ?? 'N/A',
-                'request_info' => method_exists($e, 'getRequest') ? [
-                    'method' => $e->getRequest()->getMethod(),
-                    'uri' => (string) $e->getRequest()->getUri(),
-                ] : null
+            // ✅ Success
+            if ($statusCode >= 200 && $statusCode < 300) {
+                return [
+                    'success' => true,
+                    'message' => 'Order sent successfully',
+                    'reference' => $databody['tracking_id'] ?? $databody['id'] ?? null,
+                    'tracking_id' => $databody['tracking_id'] ?? null,
+                    'portal_order_id' => $databody['id'] ?? null,
+                    'portal_response' => $databody,
+                ];
+            }
+
+            // ❌ API-level error
+            Log::error('Portal API returned error', [
+                'order_number' => $orderData['order_number'] ?? null,
+                'status_code' => $statusCode,
+                'response' => $databody,
             ]);
 
             return [
                 'success' => false,
-                'message' => 'Connection failed: ' . $e->getMessage()
+                'message' => $body['error']
+                    ?? $body['message']
+                    ?? 'Portal returned an error',
+                'status_code' => $statusCode,
+                'portal_response' => $databody,
+            ];
+        } catch (RequestException $e) {
+
+            Log::critical('Portal request failed', [
+                'order_number' => $orderData['order_number'] ?? null,
+                'error' => $e->getMessage(),
+                'request' => $e->getRequest()
+                    ? [
+                        'method' => $e->getRequest()->getMethod(),
+                        'uri' => (string) $e->getRequest()->getUri(),
+                    ]
+                    : null,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Connection failed: ' . $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Update Shopify order with tracking and fulfillment - FIXED
+     * Update Shopify order with tracking and fulfillment - FIXED VERSION
      */
     private function updateShopifyOrder($user, $shopifyOrderId, $portalResponse)
     {
-        //    $portalResponse = [
-        //         'status' => true,
-        //         'message' => 'Order pushed successfully',
-        //         'portal_order_id' => 456789,
-        //         // 'tracking_id' => $portalResponse['tracking_id'],
-        //         // 'tracking_url' => $this->generateTrackingUrl($portalResponse['tracking_id']),
-        //         'tracking_id' => 'GX-1458758',
-        //         'tracking_url' => $this->generateTrackingUrl('GX-1458758'),
-        //         'portal_response' => [
-        //             'id' => 456789,
-        //             'order_status' => 'processing',
-        //             'created_at' => now()->toDateTimeString()
-        //         ]
-        //     ];
-
-        //     $user = Auth::user(); // logged-in Shopify user
-        //     $shopifyOrderId = 6537998434521; // REAL Shopify order ID
-
-
         try {
-
-            // Get tracking ID from the correct location in response
-            $trackingId = $portalResponse['tracking_id'] ?? ($portalResponse['portal_response']['tracking_id'] ?? null);
-            $portalOrderId = $portalResponse['portal_order_id'] ?? ($portalResponse['portal_response']['id'] ?? null);
+            $trackingId = $portalResponse['tracking_id'] ?? null;
+            $portalOrderId = $portalResponse['portal_order_id'] ?? null;
 
             Log::info('Updating Shopify order:', [
                 'order_id' => $shopifyOrderId,
                 'tracking_id' => $trackingId,
-                'portal_order_id' => $portalOrderId,
-                'portal_response_keys' => array_keys($portalResponse)
+                'portal_order_id' => $portalOrderId
             ]);
 
             if (!$trackingId) {
@@ -881,16 +902,26 @@ class OrderController extends Controller
                 return false;
             }
 
-            // 1. Update order note with tracking info
-            $existingOrder = $user->api()->rest('GET', "/admin/api/{$this->version}/orders/{$shopifyOrderId}.json");
-            $existingNote = $existingOrder['body']['order']['note'] ?? '';
+            // 1. Get order details
+            $orderRes = $user->api()->rest(
+                'GET',
+                "/admin/api/{$this->version}/orders/{$shopifyOrderId}.json"
+            );
 
-            $newNote = $existingNote . "\n\n--- Shipping Info ---\n" .
-                    "Tracking ID: " . $trackingId . "\n" .
-                    "Portal Order ID: " . ($portalOrderId ?? 'N/A') . "\n" .
-                    "Processed: " . now()->format('Y-m-d H:i:s');
+            $order = $orderRes['body']['order'] ?? [];
 
-            // Update order with tracking info
+            if (empty($order)) {
+                Log::error('Shopify order not found', ['order_id' => $shopifyOrderId]);
+                return false;
+            }
+
+            // 2. Update order note with tracking info
+            $existingNote = $order['note'] ?? '';
+            $newNote = trim($existingNote . "\n\n--- Shipping Info ---\n" .
+                "Tracking ID: {$trackingId}\n" .
+                "Portal Order ID: {$portalOrderId}\n" .
+                "Processed: " . now()->format('Y-m-d H:i:s'));
+
             $updateResponse = $user->api()->rest('PUT', "/admin/api/{$this->version}/orders/{$shopifyOrderId}.json", [
                 'order' => [
                     'id' => $shopifyOrderId,
@@ -903,15 +934,93 @@ class OrderController extends Controller
                         [
                             'name' => 'portal_order_id',
                             'value' => $portalOrderId ?? ''
+                        ],
+                        [
+                            'name' => 'processed_by_portal',
+                            'value' => 'yes'
                         ]
                     ]
                 ]
             ]);
 
-            // 2. Create fulfillment
+            // 3. Get fulfillment orders (New Shopify API method)
+            $foRes = $user->api()->rest(
+                'GET',
+                "/admin/api/{$this->version}/orders/{$shopifyOrderId}/fulfillment_orders.json"
+            );
+
+            $fulfillmentOrders = $foRes['body']['fulfillment_orders'] ?? [];
+
+            if (empty($fulfillmentOrders)) {
+                Log::warning('No fulfillment orders found, trying legacy fulfillment', [
+                    'order_id' => $shopifyOrderId
+                ]);
+
+                // Fallback to legacy fulfillment
+                return $this->createLegacyFulfillment($user, $shopifyOrderId, $trackingId);
+            }
+
+            // 4. Create fulfillment using Fulfillment Orders API
+            $fulfillmentOrder = $fulfillmentOrders[0];
+
+            $fulfillmentPayload = [
+                'fulfillment' => [
+                    'message' => 'Shipped via GreenEx',
+                    'notify_customer' => true,
+                    'tracking_info' => [
+                        'number' => $trackingId,
+                        'company' => 'GreenEx',
+                        'url' => $this->generateTrackingUrl($trackingId)
+                    ],
+                    'line_items_by_fulfillment_order' => [[
+                        'fulfillment_order_id' => $fulfillmentOrder['id'],
+                        'fulfillment_order_line_items' => array_map(function ($item) {
+                            return [
+                                'id' => $item['id'],
+                                'quantity' => $item['quantity']
+                            ];
+                        }, $fulfillmentOrder['line_items'] ?? [])
+                    ]]
+                ]
+            ];
+
+            $fulfillmentResponse = $user->api()->rest(
+                'POST',
+                "/admin/api/{$this->version}/fulfillments.json",
+                $fulfillmentPayload
+            );
+
+            Log::info('✅ SHOPIFY: Fulfillment created successfully', [
+                'order_id' => $shopifyOrderId,
+                'tracking_id' => $trackingId,
+                'fulfillment_order_id' => $fulfillmentOrder['id'],
+                'tracking_url' => $this->generateTrackingUrl($trackingId)
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('❌ SHOPIFY: Failed to update Shopify order:', [
+                'order_id' => $shopifyOrderId,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Legacy fulfillment method for fallback
+     */
+    private function createLegacyFulfillment($user, $shopifyOrderId, $trackingId)
+    {
+        try {
+            // Get default location
             $locationId = $this->getDefaultLocationId($user);
+
             if (!$locationId) {
-                Log::warning('No location ID found for fulfillment', ['order_id' => $shopifyOrderId]);
+                Log::error('No location ID found for legacy fulfillment');
                 return false;
             }
 
@@ -921,50 +1030,47 @@ class OrderController extends Controller
                     'tracking_number' => $trackingId,
                     'tracking_company' => 'GreenEx',
                     'tracking_url' => $this->generateTrackingUrl($trackingId),
-                    'notify_customer' => true
+                    'notify_customer' => true,
+                    'status' => 'success'
                 ]
             ];
 
-            $fulfillmentResponse = $user->api()->rest('POST',
+            $response = $user->api()->rest(
+                'POST',
                 "/admin/api/{$this->version}/orders/{$shopifyOrderId}/fulfillments.json",
                 $fulfillmentData
             );
 
-            Log::info('Shopify order updated successfully:', [
+            Log::info('Legacy fulfillment created', [
                 'order_id' => $shopifyOrderId,
-                'tracking_id' => $trackingId,
-                'fulfillment_status' => 'created'
+                'location_id' => $locationId,
+                'tracking_id' => $trackingId
             ]);
 
             return true;
-
         } catch (\Exception $e) {
-            Log::error('Failed to update Shopify order:', [
+            Log::error('Legacy fulfillment failed:', [
                 'order_id' => $shopifyOrderId,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
-
             return false;
         }
     }
+
     /**
      * Get default location ID from Shopify
      */
     private function getDefaultLocationId($user)
     {
         try {
-            $this->version = config('shopify-app.api_version');
             $locations = $user->api()->rest('GET', "/admin/api/{$this->version}/locations.json");
 
             if (isset($locations['body']['locations']) && count($locations['body']['locations']) > 0) {
-                return $locations['body']['locations'][0]['id'];
+                $firstLocation = $locations['body']['locations'][0];
+                return $firstLocation['id'];
             }
 
             return env('SHOPIFY_DEFAULT_LOCATION_ID', null);
-
         } catch (\Exception $e) {
             Log::warning('Could not get default location ID:', ['error' => $e->getMessage()]);
             return env('SHOPIFY_DEFAULT_LOCATION_ID', null);
@@ -976,7 +1082,6 @@ class OrderController extends Controller
      */
     private function generateTrackingUrl($trackingId)
     {
-        // Customize this based on your shipping provider
         if (str_starts_with($trackingId, 'GX')) {
             return "https://greenex.pk/tracking?tracking_id={$trackingId}";
         } elseif (str_starts_with($trackingId, 'LX')) {
@@ -999,4 +1104,3 @@ class OrderController extends Controller
         return view('orders.sent', ['sentOrders' => $sentOrders]);
     }
 }
-

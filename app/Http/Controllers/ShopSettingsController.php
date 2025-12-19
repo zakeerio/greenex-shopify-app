@@ -189,5 +189,4 @@ class ShopSettingsController extends Controller
             'data' => $data
         ]);
     }
-
 }
