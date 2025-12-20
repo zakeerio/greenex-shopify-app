@@ -16,7 +16,7 @@ class ShopSettingsController extends Controller
      */
     public function index(Request $request)
     {
-        $shopId = auth()->user()->id ?? null;
+        $shopId = Auth::id();
         $settings = ShopSetting::where('user_id', $shopId)->first();
 
         $settings = $settings ?? [];
@@ -126,8 +126,8 @@ class ShopSettingsController extends Controller
 
         // $shop = $request->shop_domain;
         // dd('REQUEST HIT', $request->all(), auth()->user());
-        $shop = auth()->user()->name ?? null;
-        $userId = auth()->user()->id ?? null;
+        $shop = Auth::user()?->name ?? null;
+        $userId = Auth::id();
 
         $data = ShopSetting::updateOrCreate(
             [

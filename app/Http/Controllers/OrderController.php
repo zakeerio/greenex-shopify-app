@@ -210,12 +210,37 @@ class OrderController extends Controller
                 // Fetch orders from Shopify
                 $response = $shop->api()->rest('GET', "/admin/api/{$this->version}/orders.json", $params);
 
+                if (isset($response['errors']) || ($response['status'] ?? 200) >= 400) {
+                    Log::error('Shopify API Error:', $response);
+
+                    // Handle 401 specifically
+                    if (($response['status'] ?? 200) == 401) {
+                        throw new \Exception('Shopify Auth Error: ' . (is_string($response['body'] ?? '') ? $response['body'] : 'Unauthorized'));
+                    }
+                }
+
                 // Get orders safely from ResponseAccess object
                 $orders = [];
 
                 // Check if body exists in response
                 if (isset($response['body'])) {
                     $body = $response['body'];
+
+                    // FIX: If body is a string (raw JSON or plain text), try to decode
+                    if (is_string($body)) {
+                        $decoded = json_decode($body, true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            $body = $decoded;
+                        } else {
+                            // It's a plain string error, likely from Guzzle
+                            Log::warning('Response body is not JSON: ' . $body);
+                            // If it's a string, it won't have 'orders' key, so we leave $orders as []
+                            // But we should check if it's an error message
+                            if (stripos($body, 'Invalid API key') !== false) {
+                                throw new \Exception('Shopify Configuration Error: ' . $body);
+                            }
+                        }
+                    }
 
                     // If body is a ResponseAccess object, convert it to array
                     if ($body instanceof \Gnikyt\BasicShopifyAPI\ResponseAccess) {
@@ -225,7 +250,7 @@ class OrderController extends Controller
                     // Check different possible structures
                     if (isset($body['container']['orders'])) {
                         $orders = $body['container']['orders'];
-                    } elseif (isset($body['orders'])) {
+                    } elseif (isset($body['orders'])) { // Expecting array here
                         $orders = $body['orders'];
                     }
 
@@ -322,24 +347,31 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to fetch orders from Shopify', [
                 'error' => $e->getMessage(),
+                'code' => $e->getCode(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
             ]);
+
+            $errorMessage = 'Failed to fetch orders: ' . $e->getMessage();
+
+            // Check for 401 Unauthorized
+            if ($e->getCode() == 401 || stripos($e->getMessage(), '401 Unauthorized') !== false) {
+                $errorMessage = 'Shopify Authentication Failed. Please check your API Key and Secret, or Re-Authenticate the app.';
+            }
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
                     'error' => 'API request failed',
-                    'message' => $e->getMessage()
-                ], 500);
+                    'message' => $errorMessage
+                ], $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500);
             }
 
             return view('orders', [
                 'orders' => [],
                 'totalOrders' => 0,
                 'pagination' => [],
-                'error' => 'Failed to fetch orders: ' . $e->getMessage()
+                'error' => $errorMessage
             ]);
         }
     }

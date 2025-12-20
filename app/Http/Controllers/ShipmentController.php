@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use GuzzleHttp\Client;
 use App\Models\ShopSetting;
+use Illuminate\Support\Facades\Auth;
 
 class ShipmentController extends Controller
 {
@@ -22,7 +23,7 @@ class ShipmentController extends Controller
             'verify' => false, // local SSL issue fix
         ]);
 
-        $userId = auth()->user()->id ?? null;
+        $userId = Auth::id();
         $setting = ShopSetting::where('user_id', $userId)->first();
 
         $this->token = $setting?->api_token;
@@ -77,7 +78,7 @@ class ShipmentController extends Controller
     =============================== */
     public function details($id)
     {
-        $response = $this->request('GET', $this->backendApiUrl ."/parcel/details/{$id}");
+        $response = $this->request('GET', $this->backendApiUrl . "/parcel/details/{$id}");
 
         $shipment = $response['data'] ?? null;
 
@@ -89,7 +90,7 @@ class ShipmentController extends Controller
     =============================== */
     public function edit($id)
     {
-        $response = $this->request('GET', $this->backendApiUrl ."/parcel/details/{$id}");
+        $response = $this->request('GET', $this->backendApiUrl . "/parcel/details/{$id}");
 
         $shipment = $response['data'] ?? null;
 
@@ -161,7 +162,7 @@ class ShipmentController extends Controller
         try {
             $options = [
                 'headers' => [
-                    'apiKey' => $this->apiKey,
+                    'apiKey' => $this->backendApiKey,
                     'Accept' => 'application/json',
                     'Authorization' => "Bearer {$this->token}",
                 ]
@@ -177,12 +178,11 @@ class ShipmentController extends Controller
 
             $response = $this->client->request(
                 $method,
-                $this->apiUrl . $endpoint,
+                $this->backendApiUrl . $endpoint,
                 $options
             );
 
             return json_decode($response->getBody()->getContents(), true);
-
         } catch (\Throwable $e) {
             return [
                 'status' => false,
