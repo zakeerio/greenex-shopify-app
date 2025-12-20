@@ -25,7 +25,12 @@ class CreateSentOrdersTable extends Migration
             $table->timestamp('sent_at')->nullable();
             $table->timestamp('processed_at')->nullable();
             $table->timestamp('portal_sync_at')->nullable();
+
+
             $table->timestamps();
+
+            // 🔥 ADD THIS UNIQUE CONSTRAINT
+            $table->unique(['user_id', 'order_id']);
 
             $table->index(['user_id', 'order_id']);
             $table->index('portal_reference');

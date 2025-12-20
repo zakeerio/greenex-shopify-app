@@ -735,7 +735,11 @@ class OrderController extends Controller
                 'note'           => $orderData['note'] ?? '',
                 'discount_codes' => $orderData['discount_codes'] ?? [],
                 'tax_amount'     => $orderData['total_tax'] ?? 0,
+                'parcel_details' => $orderData['parcel_details'] ?? '',
             ],
+
+
+
 
             /* ---------- LINE ITEMS (NESTED ARRAY) ---------- */
             'line_items' => array_map(function ($item) {
@@ -837,35 +841,38 @@ class OrderController extends Controller
             $statusCode = $response->getStatusCode();
             $rawBody    = $response->getBody()->getContents();
             $body       = json_decode($rawBody, true);
-            $databody = $body['data'];
 
-            Log::info('Portal API Response', [
-                'status_code' => $statusCode,
-                'body' => $databody,
-                'order_number' => $orderData['order_number'] ?? null,
-                'json_error' => json_last_error_msg(),
-                'has_tracking_id' => is_array($databody) && isset($databody['tracking_id']),
-                'raw_preview' => substr($rawBody, 0, 500),
-            ]);
-
-            // ❌ Invalid JSON (HTML / text response)
-            if (json_last_error() !== JSON_ERROR_NONE || !is_array($databody)) {
-                Log::error('Portal returned invalid JSON', [
-                    'order_number' => $orderData['order_number'] ?? null,
-                    'status_code' => $statusCode,
-                    'json_error' => json_last_error_msg(),
-                    'raw_snippet' => substr($rawBody, 0, 200),
-                ]);
-
-                return [
-                    'success' => false,
-                    'message' => 'Portal returned invalid response (not JSON).',
-                    'status_code' => $statusCode,
-                ];
-            }
 
             // ✅ Success
             if ($statusCode >= 200 && $statusCode < 300) {
+
+                // Prefer structured data under 'data' but fall back to whole body
+                $databody = $body['data'] ?? $body ?? null;
+
+                Log::info('Portal API Response', [
+                    'status_code' => $statusCode,
+                    'body' => $databody,
+                    'order_number' => $orderData['order_number'] ?? null,
+                    'json_error' => json_last_error_msg(),
+                    'has_tracking_id' => is_array($databody) && isset($databody['tracking_id']),
+                    'raw_preview' => substr($rawBody, 0, 500),
+                ]);
+
+                // ❌ Invalid JSON (HTML / text response) or unexpected structure
+                if (json_last_error() !== JSON_ERROR_NONE || !is_array($databody)) {
+                    Log::error('Portal returned invalid JSON', [
+                        'order_number' => $orderData['order_number'] ?? null,
+                        'status_code' => $statusCode,
+                        'json_error' => json_last_error_msg(),
+                        'raw_snippet' => substr($rawBody, 0, 200),
+                    ]);
+
+                    return [
+                        'success' => false,
+                        'message' => 'Portal returned invalid response (not JSON).',
+                        'status_code' => $statusCode,
+                    ];
+                }
                 return [
                     'success' => true,
                     'message' => 'Order sent successfully',
@@ -880,7 +887,7 @@ class OrderController extends Controller
             Log::error('Portal API returned error', [
                 'order_number' => $orderData['order_number'] ?? null,
                 'status_code' => $statusCode,
-                'response' => $databody,
+                'response' => $body,
             ]);
 
             return [
@@ -889,7 +896,7 @@ class OrderController extends Controller
                     ?? $body['message']
                     ?? 'Portal returned an error',
                 'status_code' => $statusCode,
-                'portal_response' => $databody,
+                'portal_response' => $body,
             ];
         } catch (RequestException $e) {
 

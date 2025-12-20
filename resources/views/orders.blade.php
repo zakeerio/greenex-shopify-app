@@ -26,6 +26,7 @@
                             <th class="px-6 py-3">Pieces</th>
                             <th class="px-6 py-3">Weight</th>
                             <th class="px-6 py-3">Payment Type</th>
+                            <th class="px-6 py-3">Parcel Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,7 +63,7 @@
                             @endphp
 
                             <tr class="bg-white border-b whitespace-nowrap text-black border-gray-400 order-row"
-                                data-order-id="{{ $order['id'] }}">
+                                data-order-id="{{ $order['id'] }}" data-order-number="{{ $order['order_number'] }}">
                                 <td class="w-4 p-4">
                                     <input type="checkbox" name="ordercheckbox[]" value="{{ $order['id'] }}"
                                         class="order-checkbox w-4 h-4 text-black bg-white border-gray-300 rounded-sm"
@@ -90,7 +91,9 @@
                                 <td class="px-6 py-4">{{ $pieces }}</td>
                                 <td class="px-6 py-4">{{ number_format($weight, 2) }} kg</td>
                                 <td class="px-6 py-4 payment-type">{{ strtoupper($paymentType) }}</td>
-
+                                <td class="px-6 py-4">
+                                    <textarea name="parcel_details" class="parcel_details border border-gray-400" rows="2"></textarea>
+                                </td>
 
                                 {{-- Hidden inputs for sending to backend --}}
                                 <input type="hidden" class="order_id" name="order_id[]" value="{{ $order['id'] }}">
@@ -101,7 +104,7 @@
                                 <input type="hidden" class="shipping_address" name="shipping_address[]"
                                     value="{{ json_encode($shipping) }}">
                                 <input type="hidden" class="name" name="name[]" value="{{ $shipping['name'] ?? '' }}">
-                                <input type="hidden" class="note" name="note[]" value="{{ $order['note'] ?? '' }}">
+
                             </tr>
                         @empty
                             <tr>
