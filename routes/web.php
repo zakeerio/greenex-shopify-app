@@ -50,6 +50,10 @@ Route::middleware(['verify.shopify'])->group(function () {
 
     // Shipment Routes
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments');
+    // Route::match(['get', 'post'], '/shipments/print', [ShipmentController::class, 'bulkPrint'])->name('shipments.print');
+    // Route::post('/shipments/print', [ShipmentController::class, 'bulkPrint'])->name('shipments.print');
+    Route::match(['get', 'post'], '/shipments/print', [ShipmentController::class, 'bulkPrint'])
+        ->name('shipments.print');
 
 
     // Route::get('/parcel/create', [ShipmentController::class, 'create'])->name('parcel.create');
@@ -93,5 +97,4 @@ Route::middleware(['verify.shopify'])->group(function () {
 
     // View sent orders history
     Route::get('/orders/sent', [OrderController::class, 'sentOrders'])->name('orders.sent');
-
 });

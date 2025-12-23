@@ -55,6 +55,72 @@ class ShipmentController extends Controller
         return view('shipments', compact('shipments'));
     }
 
+    // /* ===============================
+    //    🖨️ BULK PRINT
+    // =============================== */
+    // public function bulkPrint(Request $request)
+    // {
+    //     $selectedIds = $request->input('selected_shipments', []);
+
+    //     if (empty($selectedIds)) {
+    //         return redirect()->back()->with('error', 'No shipments selected.');
+    //     }
+
+    //     $response = $this->client->request('GET', $this->backendApiUrl . '/parcel/index', [
+    //         'headers' => [
+    //             'apiKey' => $this->backendApiKey,
+    //             'Accept' => 'application/json',
+    //             'Authorization' => "Bearer $this->token",
+    //         ]
+    //     ]);
+
+    //     $json = json_decode($response->getBody()->getContents(), true);
+    //     $allShipments = $json['data']['parcels'] ?? $json['data'] ?? [];
+
+    //     $shipments = array_filter($allShipments, function ($shipment) use ($selectedIds) {
+    //         return in_array($shipment['id'], $selectedIds);
+    //     });
+
+    //     return view('print-shipments', compact('shipments'));
+    // }
+
+    public function bulkPrint(Request $request)
+    {
+        // \Illuminate\Support\Facades\Log::info('BulkPrint Entry', ['method' => $request->method(), 'url' => $request->fullUrl()]);
+
+        // ✅ If someone hits URL directly or refreshes (GET request)
+        if ($request->isMethod('get')) {
+            return redirect()->route('shipments');
+        }
+
+        // \Illuminate\Support\Facades\Log::info('BulkPrint Hit', ['method' => $request->method(), 'all' => $request->all()]);
+        // dd($request->all());
+
+        $selectedIds = $request->input('selected_shipments', []);
+
+        if (empty($selectedIds)) {
+            return redirect()->back()->with('error', 'No shipments selected.');
+        }
+
+        $response = $this->client->request('POST', $this->backendApiUrl . '/parcel/printLabelParcels', [
+            'headers' => [
+                'apiKey' => $this->backendApiKey,
+                'Accept' => 'application/json',
+                'Authorization' => "Bearer $this->token",
+            ],
+            'form_params' => [
+                'parcel_ids' => $selectedIds
+            ]
+        ]);
+        // dd();
+        $json = json_decode($response->getBody()->getContents(), true);
+
+        $shipments = $json['data']['parcels'] ?? $json['data'] ?? [];
+
+        return view('print-shipments', compact('shipments'));
+    }
+
+
     /* ===============================
        ➕ CREATE FORM
     =============================== */
