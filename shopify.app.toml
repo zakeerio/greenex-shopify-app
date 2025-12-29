@@ -1,21 +1,24 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "fac1e9434f4d557cd0f34129c5c96c29"
-
-application_url = "https://greenex-shopify-app.test/"
-
+client_id = "556426e3657f83be39a8047543c94390"
+name = "Greenexapp-dev-1"
+application_url = "https://permanganic-yolande-orthostichous.ngrok-free.dev"
 embedded = true
-name = "GreenEx-dev"
-handle = "greenex-dev-1"
+handle = "greenexapp-dev-1-1"
 
 [webhooks]
 api_version = "2025-10"
 
-[auth]
-redirect_urls = [ "https://greenex-shopify-app.test/authenticate" ]
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_assigned_fulfillment_orders,write_assigned_fulfillment_orders,read_locations,read_orders,write_orders"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
+[auth]
+redirect_urls = [
+  "https://permanganic-yolande-orthostichous.ngrok-free.dev/authenticate"
+]
 
 [pos]
 embedded = false
-
-[build]

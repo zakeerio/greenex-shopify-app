@@ -16,100 +16,6 @@ class ShopifyController extends Controller
     protected $backendApiUrl;
     protected $backendApiKey;
     protected $version;
-    //
-    // public function fetchOrders(Request $request)
-    // {
-    //     $version = config('shopify-app.api_version'); // or stored version
-
-    //     $shop = Auth::user();
-
-    //     if (!$shop) {
-    //         return response()->json([
-    //             'error' => 'Shop not authenticated',
-    //         ], 401);
-    //     }
-
-    //     try {
-
-    //         // $response = $shop->api()->rest('GET', '/orders.json');
-    //         // return $response['body']['orders'];
-
-    //         $response = $shop->api()->rest('GET', "/admin/api/{$version}/orders.json", ['limit' => 100]);
-    //         // dd($response['body']['container']['orders']);
-
-    //         // if (!isset($response['body']['container']['orders'])) {
-    //         //     return response()->json(['error' => 'Failed to fetch orders 1234 '], 500);
-    //         // } else {
-    //             // dd($response['body']['container']['orders']);
-    //         // }
-
-    //         $orders = ($response['body']['container']['orders']) ? $response['body']['container']['orders'] : [];
-    //         // dd($orders);
-    //         return view('orders', ['orders' => $orders]);
-    //     } catch (\Exception $e) {
-    //         return response()->json(['error' => 'API request failed', 'message' => $e->getMessage()], 500);
-    //     }
-    // }
-
-    // sendOrders
-    //     public function sendOrders(Request $request)
-    // {
-    //     $request->validate([
-    //         'orders' => 'required|array|min:1',
-    //     ]);
-
-    //     $user = Auth::user();
-
-    //     if (!$user) {
-    //         return response()->json([
-    //             'error' => 'Shop not authenticated'
-    //         ], 401);
-    //     }
-
-    //     $shopSetting = ShopSetting::where('user_id', $user->id)->first();
-
-    //     if (!$shopSetting || !$shopSetting->api_token) {
-    //         return response()->json([
-    //             'error' => 'API token not found'
-    //         ], 403);
-    //     }
-
-    //     try {
-
-    //         $client = new Client([
-    //             'verify' => false, // ⚠️ only local
-    //             'timeout' => 30,
-    //         ]);
-
-    //         $response = $client->post(
-    //             env('BACKEND_API_URL') . '/order/save',
-    //             [
-    //                 'headers' => [
-    //                     'Accept'        => 'application/json',
-    //                     'apiKey'        => env('BACKEND_API_KEY'),
-    //                     'Authorization' => 'Bearer ' . $shopSetting->api_token,
-    //                 ],
-    //                 'json' => [
-    //                     'orders' => $request->orders
-    //                 ]
-    //             ]
-    //         );
-
-    //         $result = json_decode($response->getBody()->getContents(), true);
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'data'    => $result
-    //         ]);
-
-    //     } catch (\Throwable $e) {
-
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
 
     public function __construct()
     {
@@ -119,7 +25,6 @@ class ShopifyController extends Controller
     }
     public function dashboard(Request $request)
     {
-
 
         if (!Auth::check()) {
             return response()->json(['error' => 'Unauthorized'], 401);
@@ -195,25 +100,28 @@ class ShopifyController extends Controller
             //     "returns" => [0,0,0,0,0,0,0,0]
             // ];
 
-            $client = new Client([
-                'verify' => false, // only for local SSL issues
-            ]);
+            if ($user) {
 
+                $client = new Client([
+                    'verify' => false, // only for local SSL issues
+                ]);
 
-            $token = $user->api_token;
+                $token = $user->api_token;
 
-            $response = $client->request('GET', $this->backendApiUrl . '/dashboard', [
-                'headers' => [
-                    'apiKey' => $this->backendApiKey,
-                    'Accept' => 'application/json',
-                    'Authorization' => "Bearer $token",
-                ]
-            ]);
+                $response = $client->request('GET', $this->backendApiUrl . '/dashboard', [
+                    'headers' => [
+                        'apiKey' => $this->backendApiKey,
+                        'Accept' => 'application/json',
+                        'Authorization' => "Bearer $token",
+                    ]
+                ]);
 
-            $json = json_decode($response->getBody()->getContents(), true);
-            $data = $json['data'] ?? [];
-
-            return view('dashboard', compact('data'));
+                $json = json_decode($response->getBody()->getContents(), true);
+                $data = $json['data'] ?? [];
+                return view('dashboard', compact('data'));
+            } else {
+                return view('authentication');
+            }
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => $e->getMessage()

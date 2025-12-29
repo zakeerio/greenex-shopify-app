@@ -1,39 +1,36 @@
-@extends('shopify-app::layouts.default')
+@php
+    $host = Request::get('host');
+@endphp
+
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shopify Admin</title>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <script src="https://unpkg.com/flowbite@1.7.0/dist/flowbite.js"></script>
-  <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
-  <!-- Font Awesome -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify Admin</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
+    <script>
+        var AppBridge = window['app-bridge'];
+        var actions = AppBridge.actions;
+    </script>
 
-  <style type="text/tailwindcss">
-    @theme {
-      --color-green: #4a9400;
-    }
-    .fa.text-white::before {
-        font-size: 2.5rem !important;
-    }
-  </style>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="bg-gray-100">
 
-  {{-- ✅ Navbar Include --}}
-  @include('layouts.navbar')
+    {{-- ✅ Navbar Include --}}
+    @include('layouts.navbar')
 
-  {{-- 📄 Main Content --}}
-  <main class="p-6">
-
+    {{-- 📄 Main Content --}}
+    <main class="p-6">
+        @yield('content')
     </main>
 
     @include('layouts.scripts')
@@ -63,4 +60,5 @@
         }
     </script>
 </body>
+
 </html>

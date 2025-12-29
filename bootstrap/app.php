@@ -6,13 +6,13 @@ use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
         //
-        $middleware->validateCsrfTokens(except: [ '*']);
+        $middleware->validateCsrfTokens(except: ['*']);
 
         // Register Shopify middleware
         $middleware->alias([
@@ -22,8 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.proxy'   => \Osiset\ShopifyApp\Http\Middleware\AuthProxy::class,
             'billable'     => \Osiset\ShopifyApp\Http\Middleware\Billable::class,
             // 'sanitize.shopify' => \Osiset\ShopifyApp\Http\Middleware\VerifyShopify::class,
+            'greenex.auth' => \App\Http\Middleware\CheckGreenExAuth::class,
         ]);
-
     })
 
     ->withProviders([
@@ -33,5 +33,3 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
-
-

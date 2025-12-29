@@ -120,17 +120,19 @@
                     <div class="flex flex-wrap items-center justify-between gap-4">
                         <!-- Left side: Action buttons -->
                         <div class="flex flex-wrap items-center gap-3">
-                            <!-- Send Orders (Current Method) -->
-                            <button id="sendOrders"
-                                class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium text-sm transition-colors">
-                                <span class="flex items-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                    </svg>
-                                    Send Orders (Current)
-                                </span>
-                            </button>
+                            <!-- Send Orders (Current Method)
+                                <button id="sendOrders"
+                                    class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium text-sm transition-colors">
+                                    <span class="flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                        </svg>
+                                        Send Orders (Current)
+                                    </span>
+                                </button>
+                                -->
+
 
                             <!-- Process with Guzzle (New Method) -->
                             <button id="processSelected" type="button"
@@ -140,7 +142,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                    Process Orders (Guzzle)
+                                    Process Selected Orders
                                 </span>
                             </button>
 

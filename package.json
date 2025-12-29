@@ -1,21 +1,24 @@
 {
-<<<<<<< HEAD
-    "$schema": "https://www.schemastore.org/package.json",
-=======
     "$schema": "https://json.schemastore.org/package.json",
->>>>>>> d1f29a032feed5c78daff264261fdcbe21a7c8a8
     "private": true,
     "type": "module",
     "scripts": {
         "build": "vite build",
         "dev": "vite"
     },
+    "dependencies": {
+        "@shopify/app-bridge": "^3.7.10",
+        "flowbite": "^2.3.0"
+    },
     "devDependencies": {
-        "@tailwindcss/vite": "^4.0.0",
-        "axios": "^1.11.0",
+        "@shopify/app": "^3.58.2",
+        "@shopify/cli": "^3.88.1",
+        "autoprefixer": "^10.4.19",
+        "axios": "^1.6.0",
         "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^2.0.0",
-        "tailwindcss": "^4.0.0",
-        "vite": "^7.0.7"
+        "laravel-vite-plugin": "^1.0",
+        "postcss": "^8.4.38",
+        "tailwindcss": "^3.4.3",
+        "vite": "^5.2.0"
     }
 }

@@ -70,12 +70,8 @@ class OrderController extends Controller
                 $totalWeight += ($item['grams'] ?? 0) * ($item['quantity'] ?? 0);
             }
 
-            // Convert weight to KG if in grams
-            if ($totalWeight > 0 && $totalWeight >= 10) {
-                $totalWeight = $totalWeight / 1000; // grams to kg
-            } elseif ($totalWeight <= 0) {
-                $totalWeight = 0.5; // default
-            }
+            // Convert weight to KG (Shopify returns grams)
+            $totalWeight = $totalWeight / 1000;
 
             $totalWeight = max(0.1, $totalWeight);
 
@@ -677,14 +673,8 @@ class OrderController extends Controller
         }
 
         /* ---------------- WEIGHT LOGIC ---------------- */
-        $weight = $orderData['weight'] ?? 0;
-
-        if ($weight > 0 && $weight >= 10) {
-            // assume grams → kg
-            $weight = $weight / 1000;
-        } elseif ($weight <= 0) {
-            $weight = 0.5; // default
-        }
+        // Weight is already in KG from processOrders
+        $weight = max(0.1, $orderData['weight'] ?? 0.5);
 
         $weight = max(0.1, $weight);
 

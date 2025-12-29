@@ -16,7 +16,7 @@ class ShipmentController extends Controller
 
     public function __construct()
     {
-        $this->backendApiUrl = config('app.backend_api_url');
+        $this->backendApiUrl = rtrim(config('app.backend_api_url'), '/');
         $this->backendApiKey = config('app.backend_api_key');
 
         $this->client = new Client([
@@ -34,10 +34,6 @@ class ShipmentController extends Controller
     =============================== */
     public function index()
     {
-        // $response = $this->client->request( 'GET', $this->backendApiUrl . '/parcel/index' );
-
-        // dd($backendApiUrl . '/dashboard');
-
         $response = $this->client->request('GET', $this->backendApiUrl . '/parcel/index', [
             'headers' => [
                 'apiKey' => $this->backendApiKey,
@@ -48,9 +44,6 @@ class ShipmentController extends Controller
 
         $json = json_decode($response->getBody()->getContents(), true);
         $shipments = $json['data']['parcels'] ?? $json['data'] ?? [];
-
-        // $shipments = $json['data'] ?? [];
-        // dd($shipments);
 
         return view('shipments', compact('shipments'));
     }
@@ -102,20 +95,32 @@ class ShipmentController extends Controller
             return redirect()->back()->with('error', 'No shipments selected.');
         }
 
-        $response = $this->client->request('POST', $this->backendApiUrl . '/parcel/printLabelParcels', [
+        // $response = $this->client->request('POST', $this->backendApiUrl . '/parcel/printLabelParcels', [
+        //     'headers' => [
+        //         'apiKey' => $this->backendApiKey,
+        //         'Accept' => 'application/json',
+        //         'Authorization' => "Bearer $this->token",
+        //     ],
+        //     'form_params' => [
+        //         'parcel_ids' => $selectedIds
+        //     ]
+        // ]);
+
+        $response = $this->client->request('GET', $this->backendApiUrl . '/parcel/index', [
             'headers' => [
                 'apiKey' => $this->backendApiKey,
                 'Accept' => 'application/json',
                 'Authorization' => "Bearer $this->token",
-            ],
-            'form_params' => [
-                'parcel_ids' => $selectedIds
             ]
         ]);
-        // dd();
+
         $json = json_decode($response->getBody()->getContents(), true);
 
-        $shipments = $json['data']['parcels'] ?? $json['data'] ?? [];
+        $allShipments = $json['data']['parcels'] ?? $json['data'] ?? [];
+
+        $shipments = array_filter($allShipments, function ($shipment) use ($selectedIds) {
+            return in_array($shipment['id'], $selectedIds);
+        });
 
         return view('print-shipments', compact('shipments'));
     }
@@ -242,9 +247,13 @@ class ShipmentController extends Controller
                 $options['query'] = $data;
             }
 
+            $url = str_starts_with($endpoint, 'http')
+                ? $endpoint
+                : $this->backendApiUrl . '/' . ltrim($endpoint, '/');
+
             $response = $this->client->request(
                 $method,
-                $this->backendApiUrl . $endpoint,
+                $url,
                 $options
             );
 

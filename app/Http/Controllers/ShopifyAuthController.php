@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -21,13 +22,22 @@ class ShopifyAuthController extends Controller
         ]);
         $accessToken = $response->json()['access_token'] ?? null;
 
-        // Save to users table
-        $user = Auth::user(); // Or your admin user
-        $user->update([
-            'shop_domain' => $shop,
-            'shopify_access_token' => $accessToken,
-            'shopify_api_version' => config('shopify-app.api_version'),
-        ]);
+        // Save/Update user
+        $user = User::updateOrCreate(
+            ['name' => $shop], // 'name' stores shop domain in this app based on other files
+            [
+                'email' => "admin@{$shop}",
+                'password' => $user->password ?? \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(16)), // Preserve password if exists
+                'shop_domain' => $shop,
+                'shopify_access_token' => $accessToken,
+                'shopify_api_version' => config('shopify-app.api_version'),
+            ]
+        );
+
+        // Ensure user is logged in
+        if (!Auth::check()) {
+            Auth::login($user);
+        }
 
         // Redirect to AppBridge token page inside Shopify
         $target = route('home', ['shop' => $shop, 'host' => base64_encode("$shop/admin")]);
@@ -37,5 +47,4 @@ class ShopifyAuthController extends Controller
             'target' => $target,
         ]);
     }
-
 }

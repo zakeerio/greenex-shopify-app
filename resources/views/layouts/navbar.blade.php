@@ -1,4 +1,5 @@
-<nav class="relative bg-white text-black after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10 shadow-md">
+<nav
+    class="relative bg-white text-black after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10 shadow-md">
     <div class="mx-auto max-w-11xl px-2 sm:px-6 lg:px-8">
         <div class="relative flex h-16 items-center justify-between">
 
@@ -8,13 +9,13 @@
                     class="relative inline-flex items-center justify-center rounded-md p-2 text-gray-200 hover:bg-white/10 hover:text-white focus:outline-2 focus:-outline-offset-1 focus:outline-blue-400"
                     aria-controls="mobile-menu" aria-expanded="false">
                     <span class="sr-only">Open main menu</span>
-                    <svg class="block size-6" xmlns="http://www.w3.org/2000/svg" fill="none"
-                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <svg class="block size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
-                    <svg class="hidden size-6" xmlns="http://www.w3.org/2000/svg" fill="none"
-                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <svg class="hidden size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
@@ -31,28 +32,28 @@
                            class="py-2 text-sm font-medium {{ (request()->routeIs('dashboard') || request()->routeIs('/')) ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
                             Authenticate
                         </a> --}}
-                        <a href="{{ route('dashboard') }}?host={{ request()->get('host') }}"
-                           class="py-2 text-sm font-medium {{ (request()->routeIs('dashboard') || request()->routeIs('/')) ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                        <a href="{{ route('dashboard', request()->query()) }}"
+                            class="py-2 text-sm font-medium {{ request()->routeIs('dashboard') || request()->routeIs('/') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
                             Dashboard
                         </a>
 
-                        <a href="{{ route('orders') }}?host={{ request()->get('host') }}"
-                           class="px-3 py-2 text-sm font-medium {{ request()->routeIs('orders*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                        <a href="{{ route('orders', request()->query()) }}"
+                            class="px-3 py-2 text-sm font-medium {{ request()->routeIs('orders*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
                             Orders
                         </a>
 
-                        <a href="{{ route('shipments') }}?host={{ request()->get('host') }}"
-                           class="px-3 py-2 text-sm font-medium {{ request()->routeIs('shipments*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                        <a href="{{ route('shipments', request()->query()) }}"
+                            class="px-3 py-2 text-sm font-medium {{ request()->routeIs('shipments*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
                             Shipments
                         </a>
 
-                        <a href="{{ route('settings') }}?host={{ request()->get('host') }}"
-                           class="px-3 py-2 text-sm font-medium {{ request()->routeIs('settings*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                        <a href="{{ route('settings', request()->query()) }}"
+                            class="px-3 py-2 text-sm font-medium {{ request()->routeIs('settings*') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
                             Settings
                         </a>
 
-                        <a href="#"
-                           class="px-3 py-2 text-sm font-medium {{ request()->routeIs('instructions') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
+                        <a href="{{ route('instructions', request()->query()) }}"
+                            class="px-3 py-2 text-sm font-medium {{ request()->routeIs('instructions') ? 'text-green border-b-2 border-green' : 'text-black hover:text-green' }}">
                             Instructions
                         </a>
                     </div>
@@ -84,27 +85,26 @@
     </div>
 
     <!-- Mobile Menu -->
-    <div id="mobile-menu"
-        class="hidden sm:hidden bg-white text-center backdrop-blur-md border-t border-white/10">
+    <div id="mobile-menu" class="hidden sm:hidden bg-white text-center backdrop-blur-md border-t border-white/10">
         <div class="space-y-1 px-2 pt-2 pb-3">
-            <a href="{{ route('dashboard') }}?host={{ request()->get('host') }}"
-               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('dashboard') ? 'text-green' : 'text-black hover:text-green' }}">
+            <a href="{{ route('dashboard', request()->query()) }}"
+                class="block px-3 py-2 text-base font-medium {{ request()->routeIs('dashboard') ? 'text-green' : 'text-black hover:text-green' }}">
                 Dashboard
             </a>
-            <a href="{{ route('orders') }}?host={{ request()->get('host') }}"
-               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('orders*') ? 'text-green' : 'text-black hover:text-green' }}">
+            <a href="{{ route('orders', request()->query()) }}"
+                class="block px-3 py-2 text-base font-medium {{ request()->routeIs('orders*') ? 'text-green' : 'text-black hover:text-green' }}">
                 Orders
             </a>
-            <a href="{{ route('shipments') }}?host={{ request()->get('host') }}"
-               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('shipments*') ? 'text-green' : 'text-black hover:text-green' }}">
+            <a href="{{ route('shipments', request()->query()) }}"
+                class="block px-3 py-2 text-base font-medium {{ request()->routeIs('shipments*') ? 'text-green' : 'text-black hover:text-green' }}">
                 Shipments
             </a>
-            <a href="{{ route('settings') }}?host={{ request()->get('host') }}"
-               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('settings*') ? 'text-green' : 'text-black hover:text-green' }}">
+            <a href="{{ route('settings', request()->query()) }}"
+                class="block px-3 py-2 text-base font-medium {{ request()->routeIs('settings*') ? 'text-green' : 'text-black hover:text-green' }}">
                 Settings
             </a>
-            <a href="#"
-               class="block px-3 py-2 text-base font-medium {{ request()->routeIs('instructions') ? 'text-green' : 'text-black hover:text-green' }}">
+            <a href="{{ route('instructions', request()->query()) }}"
+                class="block px-3 py-2 text-base font-medium {{ request()->routeIs('instructions') ? 'text-green' : 'text-black hover:text-green' }}">
                 Instructions
             </a>
         </div>
