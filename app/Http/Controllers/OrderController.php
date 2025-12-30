@@ -338,8 +338,13 @@ class OrderController extends Controller
                 ]);
             }
 
-            // For regular request, return view
-            return view('orders', [
+            // For regular request, return Inertia render
+            // return view('orders', [
+            //     'orders' => $processedOrders,
+            //     'totalOrders' => count($processedOrders),
+            //     'pagination' => $pagination
+            // ]);
+            return \Inertia\Inertia::render('Orders/Index', [
                 'orders' => $processedOrders,
                 'totalOrders' => count($processedOrders),
                 'pagination' => $pagination
@@ -1140,6 +1145,7 @@ class OrderController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('orders.sent', ['sentOrders' => $sentOrders]);
+        // return view('orders.sent', ['sentOrders' => $sentOrders]);
+        return \Inertia\Inertia::render('Orders/Sent', ['sentOrders' => $sentOrders]);
     }
 }

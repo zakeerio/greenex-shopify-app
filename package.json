@@ -1,21 +1,27 @@
 {
-<<<<<<< HEAD
-    "$schema": "https://www.schemastore.org/package.json",
-=======
-    "$schema": "https://json.schemastore.org/package.json",
->>>>>>> d1f29a032feed5c78daff264261fdcbe21a7c8a8
     "private": true,
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "shopify:dev": "shopify app dev"
     },
     "devDependencies": {
-        "@tailwindcss/vite": "^4.0.0",
-        "axios": "^1.11.0",
+        "@inertiajs/react": "^2.0.0",
+        "@vitejs/plugin-react": "^4.7.0",
+        "autoprefixer": "^10.4.23",
+        "axios": "^1.7.4",
         "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^2.0.0",
-        "tailwindcss": "^4.0.0",
-        "vite": "^7.0.7"
+        "laravel-vite-plugin": "^1.0.0",
+        "postcss": "^8.5.6",
+        "tailwindcss": "^3.4.19",
+        "vite": "^5.4.21"
+    },
+    "dependencies": {
+        "@shopify/app-bridge-react": "^4.1.3",
+        "@shopify/polaris": "^13.0.0",
+        "@shopify/polaris-icons": "^9.3.1",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1"
     }
 }

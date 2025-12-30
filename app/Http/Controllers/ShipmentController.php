@@ -52,7 +52,8 @@ class ShipmentController extends Controller
         // $shipments = $json['data'] ?? [];
         // dd($shipments);
 
-        return view('shipments', compact('shipments'));
+        // return view('shipments', compact('shipments'));
+        return \Inertia\Inertia::render('Shipments/Index', compact('shipments'));
     }
 
     // /* ===============================

@@ -213,7 +213,8 @@ class ShopifyController extends Controller
             $json = json_decode($response->getBody()->getContents(), true);
             $data = $json['data'] ?? [];
 
-            return view('dashboard', compact('data'));
+            // return view('dashboard', compact('data'));
+            return \Inertia\Inertia::render('Dashboard', compact('data'));
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => $e->getMessage()

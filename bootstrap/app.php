@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         //
         $middleware->validateCsrfTokens(except: [ '*']);
 
+
         // Register Shopify middleware
         $middleware->alias([
             // 'auth.shopify' => \Osiset\ShopifyApp\Http\Middleware\AuthShop::class,
@@ -22,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.proxy'   => \Osiset\ShopifyApp\Http\Middleware\AuthProxy::class,
             'billable'     => \Osiset\ShopifyApp\Http\Middleware\Billable::class,
             // 'sanitize.shopify' => \Osiset\ShopifyApp\Http\Middleware\VerifyShopify::class,
+        ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
     })
@@ -33,5 +38,3 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
-
-

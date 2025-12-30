@@ -20,8 +20,9 @@ class ShopSettingsController extends Controller
         $settings = ShopSetting::where('user_id', $shopId)->first();
 
         $settings = $settings ?? [];
-
-        return view('settings', compact('settings'));
+ 
+        // return view('settings', compact('settings'));
+        return \Inertia\Inertia::render('Settings/Index', compact('settings'));
     }
 
 

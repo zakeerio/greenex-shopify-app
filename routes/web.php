@@ -12,8 +12,7 @@ use App\Http\Controllers\OrderController;
 Route::post('/webhooks/app-uninstalled', [ShopifyWebhookController::class, 'appUninstalled']);
 Route::post('/webhooks/order-create', [ShopifyWebhookController::class, 'orderCreate']);
 Route::post('/webhooks/order-update', [ShopifyWebhookController::class, 'orderUpdate']);
-Route::post('/webhooks/product-update', [ShopifyWebhookController::class, 'productUpdate']);
-Route::post('/webhooks/customer-create', [ShopifyWebhookController::class, 'customerCreate']);
+
 Route::post('/webhooks/fulfillment-create', [ShopifyWebhookController::class, 'fulfillmentCreate']);
 
 

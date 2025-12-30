@@ -50,31 +50,7 @@ class ShopifyWebhookController extends Controller
         return response()->json(['status' => 'Order updated']);
     }
 
-    // ✅ Product Update
-    public function productUpdate(Request $request)
-    {
-        $product = $request->all();
 
-        Product::updateOrCreate(
-            ['shopify_product_id' => $product['id']],
-            ['payload' => json_encode($product)]
-        );
-
-        return response()->json(['status' => 'Product synced']);
-    }
-
-    // ✅ Customer Create
-    public function customerCreate(Request $request)
-    {
-        $customer = $request->all();
-
-        Customer::updateOrCreate(
-            ['shopify_customer_id' => $customer['id']],
-            ['payload' => json_encode($customer)]
-        );
-
-        return response()->json(['status' => 'Customer saved']);
-    }
 
     // ✅ Fulfillment Create
     public function fulfillmentCreate(Request $request)

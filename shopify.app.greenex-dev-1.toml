@@ -1,12 +1,13 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "fac1e9434f4d557cd0f34129c5c96c29"
-
-application_url = "https://greenex-shopify-app.test/"
-
+client_id = "1ef300f347365d8293e2137d43b111b8"
+name = "greenex-dev-1"
+application_url = "https://shopify.dev/apps/default-app-home"
 embedded = true
-name = "GreenEx-dev"
-handle = "greenex-dev-1"
+
+[build]
+automatically_update_urls_on_dev = true
+include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-01"
@@ -35,11 +36,9 @@ api_version = "2025-01"
   topics = [ "fulfillments/create" ]
   uri = "/webhooks/fulfillment-create"
 
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = ""
+
 [auth]
-redirect_urls = [ "https://greenex-shopify-app.test/authenticate" ]
-
-
-[pos]
-embedded = false
-
-[build]
+redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
