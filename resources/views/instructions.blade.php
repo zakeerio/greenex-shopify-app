@@ -18,7 +18,7 @@
                     <div class="flex items-center justify-center w-12 h-12 mb-4 rounded-full bg-green-100 text-green-600">
                         <i class="fa-solid fa-cogs text-xl"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">1. Authenticaton</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">1. Authentication</h3>
                     <p class="text-gray-600 text-sm mb-4">
                         Before starting, go to the <strong>Settings</strong> page. Enter your GreenEx credentials (email &
                         password) or API Key to authenticate your store.
