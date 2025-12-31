@@ -16,8 +16,10 @@ class ShopSettingsController extends Controller
      */
     public function index(Request $request)
     {
+
         $shopId = Auth::id();
         $settings = ShopSetting::where('user_id', $shopId)->first();
+
 
         // If not authenticated (no settings/token), redirect to authenticate page
         if (!$settings || empty($settings->api_token)) {

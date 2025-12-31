@@ -169,8 +169,8 @@
                         }
 
                         selectedOrders.push({
-                            order_id: orderData.id || orderData.merchant_id,
-                            order_number: orderData.order_number,
+                            order_id: String(orderData.id || orderData.merchant_id),
+                            order_number: String(orderData.order_number),
                             collect_payment: collectPayment,
                             merchant_id: orderData.merchant_id,
                             total_price: parseFloat(orderData.total_price),
@@ -216,6 +216,44 @@
 
                 showProcessingModal(selectedOrders);
 
+                // Get Session Token
+                let token = "";
+                console.log("Attempting to retrieve session token...");
+                if (window.app) {
+                    try {
+                        const utils = window["app-bridge"].utilities;
+                        token = await utils.getSessionToken(window.app);
+                        
+                        if (token) {
+                            console.log("Session token retrieved (length: " + token.length + ")");
+                            // Decode JWT payload for debugging
+                            try {
+                                const payload = JSON.parse(atob(token.split('.')[1]));
+                                console.log("Token Payload:", payload);
+                                console.log("Token Shop:", payload.dest); // usually matches shop domain
+                            } catch (e) {
+                                console.warn("Could not decode token payload", e);
+                            }
+                        } else {
+                            console.error("Session token is EMPTY");
+                            alert("Authentication Error: Could not retrieve session token. Please reload the page.");
+                            return;
+                        }
+
+                    } catch (e) {
+                        console.error("Error retrieving session token:", e);
+                         alert("Authentication Error: " + e.message);
+                         return;
+                    }
+                } else {
+                    console.error("window.app is not defined! Host parameter might be missing.");
+                    const urlParams = new URLSearchParams(window.location.search);
+                    console.log("Current URL Search Params:", window.location.search);
+                    console.log("Host param:", urlParams.get('host'));
+                    alert("System Error: App Bridge not initialized. Please reload the page from Shopify Admin.");
+                    return;
+                }
+
                 try {
                     const response = await fetch(
                         "{{ route('orders.process-selected') }}",
@@ -225,6 +263,7 @@
                                 "Content-Type": "application/json",
                                 "X-CSRF-TOKEN": csrfToken,
                                 Accept: "application/json",
+                                Authorization: `Bearer ${token}`,
                             },
                             body: JSON.stringify({
                                 selected_orders: selectedOrders,

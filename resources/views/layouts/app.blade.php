@@ -1,5 +1,5 @@
 @php
-    $host = Request::get('host');
+$host = Request::get('host');
 @endphp
 
 
@@ -47,18 +47,20 @@
 
         if (host) {
             var app = createApp({
-                apiKey: '{{ config('shopify-app.api_key') }}',
+                apiKey: '{{ config("shopify-app.api_key") }}',
                 host: host,
                 forceRedirect: true
             });
+            window.app = app;
 
             // Set up app bridge actions
             var TitleBar = actions.TitleBar;
             TitleBar.create(app, {
-                title: '{{ config('shopify-app.app_name') }}'
+                title: '{{ config("shopify-app.app_name") }}'
             });
         }
     </script>
+    @stack('scripts')
 </body>
 
 </html>

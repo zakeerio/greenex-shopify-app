@@ -205,7 +205,7 @@ class OrderController extends Controller
             do {
                 // Fetch orders from Shopify
                 $response = $shop->api()->rest('GET', "/admin/api/{$this->version}/orders.json", $params);
-
+                // dd($response);
                 if (isset($response['errors']) || ($response['status'] ?? 200) >= 400) {
                     Log::error('Shopify API Error:', $response);
 
@@ -377,6 +377,7 @@ class OrderController extends Controller
      */
     public function processSelectedOrders(Request $request)
     {
+
         // Log incoming request
         Log::info('Process Selected Orders Request:', [
             'user_id' => Auth::id(),
@@ -387,11 +388,10 @@ class OrderController extends Controller
         // Validate request
         $validator = Validator::make($request->all(), [
             'selected_orders' => 'required|array|min:1',
-            'selected_orders.*.order_id' => 'required|string',
-            'selected_orders.*.order_number' => 'required|string',
+            'selected_orders.*.order_id' => 'required',
+            'selected_orders.*.order_number' => 'required',
             'selected_orders.*.collect_payment' => 'required|in:yes,no',
         ]);
-
         if ($validator->fails()) {
             Log::error('Order selection validation failed:', $validator->errors()->toArray());
             return response()->json([
@@ -522,7 +522,6 @@ class OrderController extends Controller
 
                     // Send to portal
                     $response = $this->sendToPortal($portalData, $shopSetting->api_token);
-
                     if ($response['success']) {
                         // Use database transaction for atomic operations
                         DB::beginTransaction();
