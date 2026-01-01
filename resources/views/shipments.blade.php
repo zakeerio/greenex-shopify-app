@@ -1,22 +1,20 @@
 @extends('layouts.app')
 @section('title', 'Shipments')
 @section('content')
+
 {{-- DataTables & jQuery --}}
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.tailwindcss.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
-{{-- DataTables Tailwind CSS --}}
+{{-- DataTables CSS --}}
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.tailwindcss.css">
-
-{{-- DataTables Responsive Extension CSS (Required for the + icon to look right) --}}
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-{{-- DataTables Responsive JS --}}
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
 <style>
-    /* Shopify-like DataTables Customization */
+    /* 1. Shopify-like Input Styles */
     .dataTables_wrapper .dataTables_length select {
         padding-right: 2rem;
         border-color: #e5e7eb;
@@ -31,30 +29,63 @@
         margin-left: 0.5rem;
     }
 
-    /* Styling the Plus Button for Child Rows */
-    table.dataTable.dtr-inline.collapsed>tbody>tr>td.dtr-control:before {
-        background-color: #008060;
-        border: none;
-        box-shadow: none;
-        top: 50%;
-        transform: translateY(-50%);
-    }
-
-    /* Ensure table takes full width */
+    /* 2. Table Layout Fixes */
     table.dataTable {
         width: 100% !important;
+        margin-top: 1rem;
+        border-collapse: collapse !important;
+    }
+
+    /* 3. Child Row Plus Icon Styling */
+    table.dataTable.dtr-inline.collapsed>tbody>tr>td.dtr-control {
+        position: relative;
+        padding-left: 40px !important;
+    }
+
+    table.dataTable.dtr-inline.collapsed>tbody>tr>td.dtr-control:before {
+        background-color: #008060;
+        top: 50%;
+        left: 10px;
+        transform: translateY(-50%);
+        height: 16px;
+        width: 16px;
+        line-height: 16px;
+        border-radius: 50%;
+        display: block;
+        position: absolute;
+        color: white;
+        text-align: center;
+        content: '+';
+        font-family: 'Courier New', Courier, monospace;
+        box-shadow: none;
+        border: none;
+    }
+
+    /* Minus Icon when Open */
+    table.dataTable.dtr-inline.collapsed>tbody>tr.parent>td.dtr-control:before {
+        background-color: #d82c0d;
+        content: '-';
+    }
+
+    /* 4. Child Row Content Styling (Jo + click karne pe text ata h) */
+    table.dataTable>tbody>tr.child ul.dtr-details {
+        width: 100%;
+    }
+
+    table.dataTable>tbody>tr.child span.dtr-title {
+        font-weight: 600;
+        min-width: 120px;
+        display: inline-block;
+        color: #374151;
+        /* Gray-700 */
     }
 </style>
 
-{{-- CHANGED: Changed max-w-11xl (invalid) to w-full max-w-7xl --}}
-<section class="w-full max-w-7xl mx-auto mt-4 px-4 sm:px-6 lg:px-8">
+<section class="w-full max-w-[95%] mx-auto mt-4 px-4 sm:px-6 lg:px-8">
     @csrf
 
-    {{-- CHANGED: Added flex-col for mobile, sm:flex-row for tablet+ --}}
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 class="text-xl font-bold text-gray-800">Shipments</h1>
-
-        {{-- CHANGED: Button is full width on mobile for easier tapping --}}
         <button type="button" id="printBtn"
             class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 shadow-sm transition-colors">
             Print Selected
@@ -62,13 +93,11 @@
     </div>
 
     <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
-        {{-- CHANGED: Added 'nowrap' class. This tells DataTables to collapse columns instead of wrapping text --}}
-        <table id="shipmentsTable" class="w-full text-sm text-left text-gray-500 hover:text-gray-700 nowrap" width="100%">
+        <table id="shipmentsTable" class="w-full text-sm text-left text-gray-500 hover:text-gray-700 nowrap display" width="100%">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
                 <tr>
                     <th class="px-6 py-3 no-sort w-4">
-                        <input type="checkbox" id="selectAll"
-                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                     </th>
                     <th class="px-6 py-3">ID</th>
                     <th class="px-6 py-3">Tracking ID</th>
@@ -77,8 +106,13 @@
                     <th class="px-6 py-3">COD</th>
                     <th class="px-6 py-3">Weight</th>
                     <th class="px-6 py-3">Invoice</th>
-                    <th class="px-6 py-3">Address</th>
-                    <th class="px-6 py-3">Type</th>
+
+                    {{-- CHANGE: Added class 'none' to force Address into child row --}}
+                    <th class="px-6 py-3 none">Address</th>
+
+                    {{-- CHANGE: Added class 'none' to force Type into child row --}}
+                    <th class="px-6 py-3 none">Type</th>
+
                     <th class="px-6 py-3">Status</th>
                     <th class="px-6 py-3">Action</th>
                 </tr>
@@ -117,10 +151,12 @@
                         {{ $shipment['invoice_no'] }}
                     </td>
 
+                    {{-- Ye ab + icon k andar dikhega --}}
                     <td class="px-6 py-4">
-                        {{ Str::limit($shipment['customer_address'], 30) }}
+                        {{ $shipment['customer_address'] }}
                     </td>
 
+                    {{-- Ye bhi ab + icon k andar dikhega --}}
                     <td class="px-6 py-4">
                         {{ $shipment['deliveryType'] }}
                     </td>
@@ -134,8 +170,7 @@
                     @endphp
 
                     <td class="px-6 py-4">
-                        <span
-                            class="px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$shipment['status']] ?? 'bg-gray-100 text-gray-800' }}">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$shipment['status']] ?? 'bg-gray-100 text-gray-800' }}">
                             {{ $shipment['statusName'] }}
                         </span>
                     </td>
@@ -154,38 +189,44 @@
     $(document).ready(function() {
         var table = $('#shipmentsTable').DataTable({
             responsive: true,
-            autoWidth: false, // Better compatibility with Tailwind
+            autoWidth: false,
             "columnDefs": [{
-                    "targets": 0,
+                    "targets": 0, // Checkbox column
                     "orderable": false,
-                    "responsivePriority": 1 // Ensure checkbox is always visible
+                    "className": 'dtr-control'
                 },
                 {
-                    "targets": 2,
-                    "responsivePriority": 2 // Ensure Tracking ID is high priority
+                    "targets": 2, // Tracking ID Priority High
+                    "responsivePriority": 1
                 },
                 {
-                    "targets": -1,
+                    "targets": -1, // Actions Priority High
                     "orderable": false,
-                    "responsivePriority": 3 // Ensure Actions are high priority
+                    "responsivePriority": 2
                 }
+                // Note: Address or Type k liye JS likhne ki zarurat nahi, 
+                // HTML class 'none' apna kaam karegi.
             ],
             language: {
                 search: "",
                 searchPlaceholder: "Search...",
                 lengthMenu: "Show _MENU_"
             },
-            // CHANGED: Improved DOM layout for mobile responsiveness
-            // Added 'flex-col sm:flex-row' and 'gap-4' to stack elements on mobile
             "dom": '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-4"lf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-4"ip>',
         });
 
         // Select All Logic
-        $('#selectAll').on('click', function() {
+        $('#selectAll').on('click', function(e) {
+            e.stopPropagation();
             var rows = table.rows({
                 'search': 'applied'
             }).nodes();
             $('input[type="checkbox"]', rows).prop('checked', this.checked);
+        });
+
+        // Individual Checkbox Click Logic
+        $('#shipmentsTable tbody').on('click', 'input[type="checkbox"]', function(e) {
+            e.stopPropagation();
         });
 
         // Print Logic
@@ -202,7 +243,7 @@
             submitWithToken(selected);
         });
 
-        // Submission Logic (Unchanged)
+        // Form Submit
         function submitWithToken(selectedIds) {
             if (window.app && window['app-bridge'] && window['app-bridge'].utilities) {
                 var getSessionToken = window['app-bridge'].utilities.getSessionToken;

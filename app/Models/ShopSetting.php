@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ShopSetting extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'user_id',               // Shopify user id
         'shop_domain',           // Unique per shop

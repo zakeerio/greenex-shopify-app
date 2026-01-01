@@ -2,31 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use GuzzleHttp\Client;
 use App\Models\ShopSetting;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\ShipmentService;
 
 class ShipmentController extends Controller
 {
-    protected $client;
-    protected $backendApiUrl;
-    protected $backendApiKey;
+    protected $shipmentService;
     protected $token;
 
-    public function __construct()
+    public function __construct(ShipmentService $shipmentService)
     {
-        $this->backendApiUrl = rtrim(config('app.backend_api_url'), '/');
-        $this->backendApiKey = config('app.backend_api_key');
+        $this->shipmentService = $shipmentService;
+    }
 
-        $this->client = new Client([
-            'verify' => false, // local SSL issue fix
-        ]);
-
+    private function getToken()
+    {
         $userId = Auth::id();
         $setting = ShopSetting::where('user_id', $userId)->first();
-
-        $this->token = $setting?->api_token;
+        return $setting?->api_token;
     }
 
     /* ===============================
@@ -34,60 +29,20 @@ class ShipmentController extends Controller
     =============================== */
     public function index()
     {
-        $response = $this->client->request('GET', $this->backendApiUrl . '/parcel/index', [
-            'headers' => [
-                'apiKey' => $this->backendApiKey,
-                'Accept' => 'application/json',
-                'Authorization' => "Bearer $this->token",
-            ]
-        ]);
-
-        $json = json_decode($response->getBody()->getContents(), true);
-        $shipments = $json['data']['parcels'] ?? $json['data'] ?? [];
+        $response = $this->shipmentService->getShipments($this->getToken());
+        $shipments = $response['data']['parcels'] ?? $response['data'] ?? [];
 
         return view('shipments', compact('shipments'));
     }
 
-    // /* ===============================
-    //    🖨️ BULK PRINT
-    // =============================== */
-    // public function bulkPrint(Request $request)
-    // {
-    //     $selectedIds = $request->input('selected_shipments', []);
-
-    //     if (empty($selectedIds)) {
-    //         return redirect()->back()->with('error', 'No shipments selected.');
-    //     }
-
-    //     $response = $this->client->request('GET', $this->backendApiUrl . '/parcel/index', [
-    //         'headers' => [
-    //             'apiKey' => $this->backendApiKey,
-    //             'Accept' => 'application/json',
-    //             'Authorization' => "Bearer $this->token",
-    //         ]
-    //     ]);
-
-    //     $json = json_decode($response->getBody()->getContents(), true);
-    //     $allShipments = $json['data']['parcels'] ?? $json['data'] ?? [];
-
-    //     $shipments = array_filter($allShipments, function ($shipment) use ($selectedIds) {
-    //         return in_array($shipment['id'], $selectedIds);
-    //     });
-
-    //     return view('print-shipments', compact('shipments'));
-    // }
-
+    /* ===============================
+       🖨️ BULK PRINT
+    =============================== */
     public function bulkPrint(Request $request)
     {
-        // \Illuminate\Support\Facades\Log::info('BulkPrint Entry', ['method' => $request->method(), 'url' => $request->fullUrl()]);
-
-        // ✅ If someone hits URL directly or refreshes (GET request)
         if ($request->isMethod('get')) {
             return redirect()->route('shipments');
         }
-
-        // \Illuminate\Support\Facades\Log::info('BulkPrint Hit', ['method' => $request->method(), 'all' => $request->all()]);
-        // dd($request->all());
 
         $selectedIds = $request->input('selected_shipments', []);
 
@@ -95,28 +50,8 @@ class ShipmentController extends Controller
             return redirect()->back()->with('error', 'No shipments selected.');
         }
 
-        // $response = $this->client->request('POST', $this->backendApiUrl . '/parcel/printLabelParcels', [
-        //     'headers' => [
-        //         'apiKey' => $this->backendApiKey,
-        //         'Accept' => 'application/json',
-        //         'Authorization' => "Bearer $this->token",
-        //     ],
-        //     'form_params' => [
-        //         'parcel_ids' => $selectedIds
-        //     ]
-        // ]);
-
-        $response = $this->client->request('GET', $this->backendApiUrl . '/parcel/index', [
-            'headers' => [
-                'apiKey' => $this->backendApiKey,
-                'Accept' => 'application/json',
-                'Authorization' => "Bearer $this->token",
-            ]
-        ]);
-
-        $json = json_decode($response->getBody()->getContents(), true);
-
-        $allShipments = $json['data']['parcels'] ?? $json['data'] ?? [];
+        $response = $this->shipmentService->getShipments($this->getToken());
+        $allShipments = $response['data']['parcels'] ?? $response['data'] ?? [];
 
         $shipments = array_filter($allShipments, function ($shipment) use ($selectedIds) {
             return in_array($shipment['id'], $selectedIds);
@@ -129,7 +64,6 @@ class ShipmentController extends Controller
 
         return view('print-shipments', compact('shipments', 'hubName'));
     }
-
 
     /* ===============================
        ➕ CREATE FORM
@@ -144,8 +78,7 @@ class ShipmentController extends Controller
     =============================== */
     public function store(Request $request)
     {
-        $response = $this->request('POST', '/parcel/store', $request->all());
-
+        $response = $this->shipmentService->request('POST', '/parcel/store', $this->getToken(), $request->all());
         return response()->json($response);
     }
 
@@ -154,10 +87,8 @@ class ShipmentController extends Controller
     =============================== */
     public function details($id)
     {
-        $response = $this->request('GET', $this->backendApiUrl . "/parcel/details/{$id}");
-
+        $response = $this->shipmentService->request('GET', "/parcel/details/{$id}", $this->getToken());
         $shipment = $response['data'] ?? null;
-
         return view('shipments.details', compact('shipment'));
     }
 
@@ -166,10 +97,8 @@ class ShipmentController extends Controller
     =============================== */
     public function edit($id)
     {
-        $response = $this->request('GET', $this->backendApiUrl . "/parcel/details/{$id}");
-
+        $response = $this->shipmentService->request('GET', "/parcel/details/{$id}", $this->getToken());
         $shipment = $response['data'] ?? null;
-
         return view('shipments.edit', compact('shipment'));
     }
 
@@ -178,8 +107,7 @@ class ShipmentController extends Controller
     =============================== */
     public function update(Request $request, $id)
     {
-        $response = $this->request('PUT', "/parcel/update/{$id}", $request->all());
-
+        $response = $this->shipmentService->request('PUT', "/parcel/update/{$id}", $this->getToken(), $request->all());
         return response()->json($response);
     }
 
@@ -188,10 +116,8 @@ class ShipmentController extends Controller
     =============================== */
     public function logs($id)
     {
-        $response = $this->request('GET', "/parcel/logs/{$id}");
-
+        $response = $this->shipmentService->request('GET', "/parcel/logs/{$id}", $this->getToken());
         $logs = $response['data'] ?? [];
-
         return view('shipments.logs', compact('logs'));
     }
 
@@ -200,10 +126,8 @@ class ShipmentController extends Controller
     =============================== */
     public function filter(Request $request)
     {
-        $response = $this->request('GET', '/parcel/filter', $request->query());
-
+        $response = $this->shipmentService->request('GET', '/parcel/filter', $this->getToken(), $request->query());
         $shipments = $response['data'] ?? [];
-
         return view('shipments.index', compact('shipments'));
     }
 
@@ -212,11 +136,7 @@ class ShipmentController extends Controller
     =============================== */
     public function updateStatus($id, $statusId)
     {
-        $response = $this->request(
-            'PUT',
-            "/parcel/{$id}/status/{$statusId}"
-        );
-
+        $this->shipmentService->request('PUT', "/parcel/{$id}/status/{$statusId}", $this->getToken());
         return redirect()->back()->with('success', 'Status Updated');
     }
 
@@ -225,49 +145,7 @@ class ShipmentController extends Controller
     =============================== */
     public function destroy($id)
     {
-        $response = $this->request('DELETE', "/parcel/delete/{$id}");
-
+        $response = $this->shipmentService->request('DELETE', "/parcel/delete/{$id}", $this->getToken());
         return response()->json($response);
-    }
-
-    /* ===============================
-       🧠 COMMON GUZZLE METHOD
-    =============================== */
-    private function request($method, $endpoint, $data = [])
-    {
-        try {
-            $options = [
-                'headers' => [
-                    'apiKey' => $this->backendApiKey,
-                    'Accept' => 'application/json',
-                    'Authorization' => "Bearer {$this->token}",
-                ]
-            ];
-
-            if (in_array($method, ['POST', 'PUT'])) {
-                $options['form_params'] = $data;
-            }
-
-            if ($method === 'GET' && !empty($data)) {
-                $options['query'] = $data;
-            }
-
-            $url = str_starts_with($endpoint, 'http')
-                ? $endpoint
-                : $this->backendApiUrl . '/' . ltrim($endpoint, '/');
-
-            $response = $this->client->request(
-                $method,
-                $url,
-                $options
-            );
-
-            return json_decode($response->getBody()->getContents(), true);
-        } catch (\Throwable $e) {
-            return [
-                'status' => false,
-                'message' => $e->getMessage()
-            ];
-        }
     }
 }
