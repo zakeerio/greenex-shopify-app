@@ -21,10 +21,11 @@ class ShopifyOrderService
     {
         try {
             $response = $shop->api()->rest('GET', "/admin/api/{$this->api_version}/orders.json", $params);
+           
 
             if ($response['errors'] ?? false) {
                 Log::error('Shopify API Error', $response);
-                throw new \Exception('Failed to fetch orders from Shopify.');
+                throw new \Exception('Failed to fetch orders from Shopify.', $response['status'] ?? 500);
             }
 
             $orders = $response['body']['orders'] ?? [];
