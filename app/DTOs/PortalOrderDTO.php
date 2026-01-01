@@ -28,6 +28,10 @@ class PortalOrderDTO
             ],
             'shipping_address' => $this->orderData['shipping_address'] ?? [],
             'line_items' => $this->orderData['line_items'] ?? [],
+            'order_details' => [
+                'total_amount' => $this->orderData['total_price'],
+                'financial_status' => $this->orderData['financial_status'] ?? 'pending',
+            ],
             'total_price' => $this->orderData['total_price'],
             'payment_type' => $this->orderData['financial_status'] === 'paid' ? 'prepaid' : 'cod',
         ];
