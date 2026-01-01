@@ -122,7 +122,12 @@ class ShipmentController extends Controller
             return in_array($shipment['id'], $selectedIds);
         });
 
-        return view('print-shipments', compact('shipments'));
+        // Fetch Hub Name from Shop Settings
+        $userId = Auth::id();
+        $shopSetting = ShopSetting::where('user_id', $userId)->first();
+        $hubName = $shopSetting->api_response['user']['hub']['name'] ?? 'N/A';
+
+        return view('print-shipments', compact('shipments', 'hubName'));
     }
 
 
