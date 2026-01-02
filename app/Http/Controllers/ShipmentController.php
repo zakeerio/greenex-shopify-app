@@ -60,7 +60,8 @@ class ShipmentController extends Controller
         // Fetch Hub Name from Shop Settings
         $userId = Auth::id();
         $shopSetting = ShopSetting::where('user_id', $userId)->first();
-        $hubName = $shopSetting->api_response['user']['hub']['name'] ?? 'N/A';
+        // api_response is the user object directly. Fallback to 'address' if 'hub.name' is missing.
+        $hubName = $shopSetting->api_response['hub']['name'] ?? ($shopSetting->api_response['address'] ?? 'N/A');
 
         return view('print-shipments', compact('shipments', 'hubName'));
     }
@@ -81,7 +82,6 @@ class ShipmentController extends Controller
         $response = $this->shipmentService->request('POST', '/parcel/store', $this->getToken(), $request->all());
         return response()->json($response);
     }
-
     /* ===============================
        🔍 DETAILS
     =============================== */
